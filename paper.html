@@ -16,7 +16,11 @@
     .paper-abstract h4 { font-size:14px; color:var(--accent); margin-bottom:6px; }
     .paper-abstract p { font-size:14px; line-height:1.8; color:var(--text); }
     .preview-box { border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-top:20px; background:#fff; }
-    .preview-box iframe { width:100%; height:78vh; border:none; }
+    .preview-box object, .preview-box iframe { width:100%; height:85vh; border:none; display:block; }
+    .pdf-prompt { padding:60px 24px; text-align:center; }
+    .pdf-prompt .pdf-icon { font-size:56px; opacity:0.12; margin-bottom:12px; }
+    .pdf-prompt p { font-size:14px; color:var(--text-light); margin-bottom:16px; }
+    .pdf-prompt .btns { display:flex; gap:10px; justify-content:center; }
     .preview-tabs { display:flex; border-bottom:1px solid var(--border); }
     .preview-tab { padding:10px 20px; font-size:13px; cursor:pointer; border:none; background:none; color:var(--text-light); border-bottom:2px solid transparent; }
     .preview-tab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
@@ -85,12 +89,12 @@
             ${paper.abstract ? `<div class="paper-abstract"><h4>\u8bba\u6587\u6458\u8981</h4><p>${paper.abstract}</p></div>` : `<div class="paper-abstract"><h4>\u8bba\u6587\u8d21\u732e</h4><p>${paper.contribution}</p></div>`}
             ${paper.pdf ? `
               <div class="preview-box">
-                <div id="tab-preview" style="padding:40px 24px;text-align:center;">
-                  <div style="font-size:48px;opacity:0.15;margin-bottom:12px;">PDF</div>
-                  <p style="font-size:14px;color:var(--text-light);margin-bottom:16px;">点击下方按钮预览或下载 PDF 文件</p>
-                  <div style="display:flex;gap:10px;justify-content:center;">
-                    <button class="btn btn-primary btn-sm" onclick="previewPdf()">预览 PDF</button>
-                    <a href="${paper.pdf}" target="_blank" class="btn btn-outline btn-sm">下载 PDF</a>
+                <div id="tab-preview" class="pdf-prompt">
+                  <div class="pdf-icon">PDF</div>
+                  <p>点击下方按钮预览或下载 PDF 文件</p>
+                  <div class="btns">
+                    <button class="btn btn-primary" onclick="previewPdf()">预览 PDF</button>
+                    <a href="${paper.pdf}" target="_blank" class="btn btn-outline">下载 PDF</a>
                   </div>
                 </div>
                 <div id="tab-info" style="display:none;padding:24px;">
@@ -121,9 +125,8 @@
 
     function previewPdf() {
       const box = document.getElementById('tab-preview');
-      box.style.padding = '0';
-      box.style.textAlign = '';
-      box.innerHTML = '<object data="' + paper.pdf + '" type="application/pdf" width="100%" height="78vh"><p style="padding:40px;text-align:center;color:var(--text-light);">浏览器不支持内嵌预览，<a href="' + paper.pdf + '" target="_blank">点击下载查看</a></p></object>';
+      box.className = '';
+      box.innerHTML = '<object data="' + paper.pdf + '" type="application/pdf"><p style="padding:40px;text-align:center;color:var(--text-light);">浏览器不支持内嵌预览，<a href="' + paper.pdf + '" target="_blank">点击下载查看</a></p></object>';
     }
 
     function renderComments(comments) {
