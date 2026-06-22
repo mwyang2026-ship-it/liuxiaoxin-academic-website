@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "刘晓欣学术网站 - 一键提取新闻",
+  "version": "1.1",
+  "description": "在任意网页点击扩展图标，自动提取内容并复制到剪贴板，粘贴到学术网站即可添加新闻",
+  "permissions": ["activeTab", "scripting", "clipboardWrite"],
+  "action": {
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png"
+    },
+    "default_title": "提取内容到剪贴板"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

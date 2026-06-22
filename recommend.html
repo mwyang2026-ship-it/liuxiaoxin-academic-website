@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>推荐阅读 — 刘晓欣</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .rec-card { position:relative; padding:20px 24px; }
+    .rec-card .rec-title { font-size:16px; font-weight:600; color:var(--text); line-height:1.5; }
+    .rec-card .rec-meta { font-size:13px; color:var(--text-light); margin-top:6px; }
+    .rec-card .rec-link { display:inline-block; margin-top:6px; font-size:13px; color:var(--primary); text-decoration:none; word-break:break-all; }
+    .rec-card .rec-link:hover { text-decoration:underline; }
+    .rec-card .rec-comment-count { font-size:12px; color:var(--accent); margin-top:6px; }
+    .rec-actions { position:absolute; top:12px; right:16px; display:flex; gap:4px; }
+    .rec-actions button { font-size:13px; background:none; border:none; cursor:pointer; color:var(--text-light); padding:2px; }
+    .rec-actions button:hover { color:var(--primary); }
+    .rec-actions .del-btn:hover { color:#dc3545; }
+    .send-email-form { margin-top:8px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+    .send-email-form input { flex:1; min-width:180px; padding:5px 10px; border:1px solid var(--border); border-radius:4px; font-size:12px; outline:none; }
+    .send-email-form input:focus { border-color:var(--primary); }
+    .add-form { background:rgba(75,0,130,0.03); border:2px dashed var(--border); border-radius:8px; padding:20px; margin-bottom:20px; }
+    .add-form input, .add-form textarea { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:14px; margin-bottom:10px; outline:none; font-family:inherit; }
+    .add-form input:focus, .add-form textarea:focus { border-color:var(--primary); }
+    .comment-thread { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+    .comment-item { padding:8px 12px; margin:4px 0; border-left:3px solid var(--primary); background:rgba(75,0,130,0.02); border-radius:0 6px 6px 0; font-size:13px; }
+    .comment-item .c-author { font-weight:600; color:var(--primary); font-size:13px; }
+    .comment-item .c-time { font-size:11px; color:var(--text-light); margin-left:6px; }
+    .comment-item .c-text { margin-top:2px; line-height:1.6; color:var(--text); }
+    .comment-item .c-reply-btn { font-size:11px; color:var(--text-light); background:none; border:none; cursor:pointer; margin-top:2px; }
+    .comment-item .c-reply-btn:hover { color:var(--primary); }
+    .reply-box { margin-left:20px; padding:6px 10px; border-left:3px solid var(--accent); background:rgba(184,134,11,0.04); border-radius:0 6px 6px 0; font-size:12px; }
+    .mini-form { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+    .mini-form input { flex:1; min-width:80px; padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-size:12px; outline:none; }
+    .mini-form input:focus { border-color:var(--primary); }
+  </style>
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <div class="container">
+    <section class="section">
+      <h2 class="section-title">推荐阅读</h2>
+      <p class="text-light text-sm mb-16">老师推荐的值得一读的论文，欢迎同学们评论交流学习感言</p>
+
+      <div id="rec-list"></div>
+
+      <div class="add-form" style="margin-top:24px;">
+        <strong style="font-size:14px;color:var(--primary);">添加推荐</strong>
+        <input type="text" id="rec-title" placeholder="论文标题">
+        <input type="text" id="rec-author" placeholder="作者（可选）">
+        <textarea id="rec-note" placeholder="推荐理由（可选）" style="min-height:60px;resize:vertical;"></textarea>
+        <input type="text" id="rec-link" placeholder="论文链接（可选，如微信文章 URL）">
+        <button class="btn btn-primary" onclick="addRec()">添加推荐</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/editor.js"></script>
+  <script>
+    initPage('recommend');
+
+    // 推荐论文数据
+    const REC_KEY = 'recommend_data';
+    function getRecs() {
+      return Editor.getData(REC_KEY) || [];
+    }
+    function saveRecs(data) {
+      Editor.saveData(REC_KEY, data);
+    }
+
+    function addRec() {
+      const title = document.getElementById('rec-title').value.trim();
+      if (!title) { showToast('请输入论文标题'); return; }
+      const recs = getRecs();
+      recs.unshift({
+        id: 'r_' + Date.now(),
+        title: title,
+        author: document.getElementById('rec-author').value.trim(),
+        note: document.getElementById('rec-note').value.trim(),
+        link: document.getElementById('rec-link').value.trim(),
+        timestamp: Date.now(),
+        comments: []
+      });
+      saveRecs(recs);
+      document.getElementById('rec-title').value = '';
+      document.getElementById('rec-author').value = '';
+      document.getElementById('rec-note').value = '';
+      document.getElementById('rec-link').value = '';
+      render();
+      showToast('已添加');
+    }
+
+    async function deleteRec(id) {
+      const ok = await showConfirm('确定删除此推荐？');
+      if (!ok) return;
+      const recs = getRecs().filter(r => r.id !== id);
+      saveRecs(recs);
+      render();
+    }
+
+    function addComment(recId) {
+      const name = document.getElementById('cn-' + recId).value.trim();
+      const text = document.getElementById('ct-' + recId).value.trim();
+      if (!name || !text) { showToast('请填写名字和评论'); return; }
+      const recs = getRecs();
+      const rec = recs.find(r => r.id === recId);
+      if (!rec.comments) rec.comments = [];
+      rec.comments.push({ id: 'rc_' + Date.now(), author: name, text, timestamp: Date.now() });
+      saveRecs(recs);
+      render();
+    }
+
+    async function deleteComment(recId, commentId) {
+      const ok = await showConfirm('确定删除此评论？');
+      if (!ok) return;
+      const recs = getRecs();
+      const rec = recs.find(r => r.id === recId);
+      rec.comments = (rec.comments || []).filter(c => c.id !== commentId);
+      saveRecs(recs);
+      render();
+    }
+
+    function toggleComments(recId) {
+      const el = document.getElementById('comments-' + recId);
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function toggleSendEmail(recId) {
+      const el = document.getElementById('send-' + recId);
+      el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+      if (el.style.display === 'flex') {
+        const input = document.getElementById('se-' + recId);
+        // 尝试从标题/作者/链接中提取邮箱
+        const rec = getRecs().find(r => r.id === recId);
+        if (rec) {
+          const emailMatch = [rec.title, rec.author, rec.note, rec.link].join(' ').match(/[\w.-]+@[\w.-]+\.\w+/);
+          if (emailMatch) input.value = emailMatch[0];
+        }
+        input.focus();
+      }
+    }
+
+    function sendEmail(recId) {
+      const email = document.getElementById('se-' + recId).value.trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showToast('\u8bf7\u8f93\u5165\u6709\u6548\u7684\u90ae\u7bb1\u5730\u5740');
+        return;
+      }
+      const rec = getRecs().find(r => r.id === recId);
+      if (!rec) return;
+      const subject = encodeURIComponent(`\u63a8\u8350\u9605\u8bfb\uff1a${rec.title}`);
+      const body = encodeURIComponent(
+        `\u8bba\u6587\u6807\u9898\uff1a${rec.title}\n` +
+        (rec.author ? `\u4f5c\u8005\uff1a${rec.author}\n` : '') +
+        (rec.note ? `\u63a8\u8350\u7406\u7531\uff1a${rec.note}\n` : '') +
+        (rec.link ? `\u94fe\u63a5\uff1a${rec.link}\n` : '') +
+        `\n\u2014\u2014 \u6765\u81ea\u5218\u6653\u6b23\u5b66\u672f\u7f51\u7ad9`
+      );
+      window.open(`mailto:${email}?subject=${subject}&body=${body}`);
+      showToast('\u5df2\u6253\u5f00\u90ae\u4ef6\u5ba2\u6237\u7aef');
+    }
+
+    function render() {
+      const recs = getRecs();
+      const container = document.getElementById('rec-list');
+      if (recs.length === 0) {
+        container.innerHTML = '<p class="text-light" style="text-align:center;padding:40px;">暂无推荐论文</p>';
+        return;
+      }
+      container.innerHTML = recs.map(r => {
+        const cCount = (r.comments || []).length;
+        return `
+        <div class="card rec-card mb-16">
+          <div class="rec-actions">
+            <button onclick="toggleSendEmail('${r.id}')" title="\u53d1\u9001\u81f3\u90ae\u7bb1">\u2709</button>
+            <button class="del-btn" onclick="deleteRec('${r.id}')" title="\u5220\u9664">\u2715</button>
+          </div>
+          <div class="rec-title">${escHtml(r.title)}</div>
+          ${r.author ? `<div class="rec-meta">${escHtml(r.author)}</div>` : ''}
+          ${r.note ? `<div class="rec-meta" style="color:var(--accent);">${escHtml(r.note)}</div>` : ''}
+          ${r.link ? `<a href="${escHtml(r.link)}" target="_blank" class="rec-link">${escHtml(r.link)}</a>` : ''}
+          <div id="send-${r.id}" class="send-email-form" style="display:none;">
+            <input type="text" id="se-${r.id}" placeholder="\u6536\u4ef6\u4eba\u90ae\u7bb1\uff08\u5982 xxx@qq.com\uff09">
+            <button class="btn btn-primary btn-sm" style="font-size:11px;padding:4px 10px;" onclick="sendEmail('${r.id}')">\u53d1\u9001</button>
+          </div>
+          <div class="rec-comment-count" style="cursor:pointer;" onclick="toggleComments('${r.id}')">${cCount > 0 ? cCount + ' 条评论' : '点击评论'}</div>
+          <div class="comment-thread" id="comments-${r.id}" style="display:none;">
+            ${(r.comments || []).map(c => `
+              <div class="comment-item">
+                <div><span class="c-author">${escHtml(c.author)}</span><span class="c-time">${formatTimestamp(c.timestamp)}</span>
+                <button class="c-reply-btn" onclick="deleteComment('${r.id}','${c.id}')">删除</button></div>
+                <div class="c-text">${escHtml(c.text)}</div>
+              </div>
+            `).join('')}
+            <div class="mini-form">
+              <input type="text" id="cn-${r.id}" placeholder="你的名字" maxlength="20">
+              <input type="text" id="ct-${r.id}" placeholder="学习感言..." style="flex:2;">
+              <button class="btn btn-primary btn-sm" style="font-size:12px;padding:5px 12px;" onclick="addComment('${r.id}')">发表</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    render();
+  </script>
+</body>
+</html>

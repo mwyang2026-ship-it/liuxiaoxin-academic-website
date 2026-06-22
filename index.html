@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>刘晓欣 — 南开大学经济学院</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .hero { display:flex; gap:36px; align-items:center; flex-wrap:wrap; padding:32px 0 24px; }
+    .hero-text { flex:1; min-width:280px; }
+    .hero-text h2 { font-family:'SimSun','Songti SC',serif; font-size:30px; color:var(--primary); margin-bottom:4px; }
+    .hero-text .affil { font-size:15px; color:var(--text-light); margin-bottom:4px; }
+    .hero-text .center-name { font-size:14px; color:var(--text-light); margin-bottom:12px; }
+    .hero-text .desc { font-size:15px; color:var(--text); line-height:1.8; margin-bottom:14px; }
+    .hero-avatar { flex:0 0 140px; }
+    .hero-avatar img, .hero-avatar div { width:140px; height:140px; border-radius:50%; object-fit:cover; }
+    .home-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:28px; }
+    .home-grid .full { grid-column:1 / -1; }
+    .home-section-title { font-family:'SimSun','Songti SC',serif; font-size:18px; color:var(--primary); margin-bottom:14px; padding-bottom:8px; border-bottom:2px solid var(--accent); display:flex; justify-content:space-between; align-items:center; }
+    .home-section-title a { font-size:12px; color:var(--text-light); text-decoration:none; font-weight:400; }
+    .home-section-title a:hover { color:var(--primary); }
+    .view-item { padding:10px 14px; border-left:3px solid var(--primary); margin-bottom:8px; cursor:pointer; transition:background 0.2s; }
+    .view-item:hover { background:rgba(75,0,130,0.04); }
+    .view-item .vi-title { font-size:14px; font-weight:600; color:var(--primary); }
+    .view-item .vi-sub { font-size:12px; color:var(--text-light); margin-top:2px; }
+    .paper-item { padding:8px 12px; border-radius:6px; margin-bottom:6px; cursor:pointer; transition:background 0.2s; }
+    .paper-item:hover { background:rgba(75,0,130,0.04); }
+    .paper-item .pi-title { font-size:13px; font-weight:600; color:var(--text); line-height:1.4; }
+    .pi-title-wrap { display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; }
+    .paper-item .pi-meta { font-size:11px; color:var(--text-light); margin-top:2px; }
+    .news-item { display:flex; justify-content:space-between; align-items:flex-start; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.05); }
+    .news-item:last-child { border-bottom:none; }
+    .news-item .ni-left { flex:1; }
+    .news-item .ni-title { font-size:13px; color:var(--text); line-height:1.4; }
+    .news-item .ni-date { font-size:11px; color:var(--text-light); margin-top:2px; white-space:nowrap; margin-left:12px; }
+    @media (max-width:768px) { .home-grid { grid-template-columns:1fr; } .hero { flex-direction:column-reverse; text-align:center; } }
+  </style>
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <div class="container">
+    <div class="hero">
+      <div class="hero-text">
+        <h2>刘晓欣</h2>
+        <div class="affil">南开大学经济学院 教授</div>
+        <div class="center-name">虚拟经济与管理研究中心</div>
+        <div class="desc">长期从事虚拟经济理论研究，从马克思虚拟资本理论出发，系统构建了虚拟经济的本体论、价值化积累理论、个别风险系统化框架，以及"实体经济—虚拟经济"分析框架。</div>
+        <div>
+          <span class="tag tag-primary">虚拟经济理论</span>
+          <span class="tag tag-primary">价值化积累</span>
+          <span class="tag tag-primary">金融危机</span>
+          <span class="tag tag-primary">实虚关系</span>
+          <span class="tag tag-primary">数字经济</span>
+        </div>
+      </div>
+      <div class="hero-avatar" style="position:relative;">
+        <img id="avatar-img" src="" alt="刘晓欣" style="width:140px;height:140px;border-radius:50%;object-fit:cover;cursor:pointer;display:none;" onclick="document.getElementById('avatar-upload').click()">
+        <div id="avatar-placeholder" style="width:140px;height:140px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;color:#fff;font-size:52px;font-family:'SimSun','Songti SC',serif;cursor:pointer;" onclick="document.getElementById('avatar-upload').click()">刘</div>
+        <input type="file" id="avatar-upload" accept="image/*" style="display:none;" onchange="uploadAvatar(this)">
+      </div>
+    </div>
+
+    <div class="home-grid">
+      <div>
+        <div class="home-section-title">学术观点 <a href="views.html">查看全部 →</a></div>
+        <div id="views-quick"></div>
+      </div>
+      <div>
+        <div class="home-section-title">代表论文 <a href="papers.html">查看全部 →</a></div>
+        <div id="top-papers"></div>
+      </div>
+      <div class="full">
+        <div class="home-section-title">最近动态 <a href="news.html">查看全部 →</a></div>
+        <div id="recent-news"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/editor.js"></script>
+  <script>
+    initPage('index');
+
+    // 头像
+    function loadAvatar() {
+      const saved = Editor.getData('avatar_data');
+      const img = document.getElementById('avatar-img');
+      const ph = document.getElementById('avatar-placeholder');
+      if (saved) {
+        img.src = saved;
+        img.style.display = 'block';
+        ph.style.display = 'none';
+      }
+    }
+    function uploadAvatar(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      if (file.size > 5 * 1024 * 1024) { showToast('\u56fe\u7247\u4e0d\u80fd\u8d85\u8fc7 5MB'); return; }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        Editor.saveData('avatar_data', e.target.result);
+        loadAvatar();
+        showToast('\u5934\u50cf\u5df2\u66f4\u65b0');
+      };
+      reader.readAsDataURL(file);
+      input.value = '';
+    }
+    loadAvatar();
+
+    // 学术观点（与 views.html 同步）
+    const viewsData = Editor.getViewsData();
+    const viewsQuick = document.getElementById('views-quick');
+    viewsData.modules.forEach(m => {
+      viewsQuick.innerHTML += `
+        <div class="view-item" onclick="location.href='views.html#${m.id}'">
+          <div class="vi-title">${m.title}</div>
+          <div class="vi-sub">${m.summary.slice(0, 50)}...</div>
+        </div>`;
+    });
+
+    // 代表论文（与 papers.html 同步：合并自定义论文 + 分类修改）
+    const customPapers = Editor.getData('custom_papers') || [];
+    const paperMods = PaperMods.getMods();
+    const builtInPapers = PAPERS_DATA.filter(p => {
+      const m = paperMods[p.id];
+      return !m || !m.deleted;
+    });
+    const allPapers = [...builtInPapers, ...customPapers].map(p => ({
+      ...p,
+      category: PaperMods.getCategory(p.id, p.category),
+      ...(paperMods[p.id] && paperMods[p.id].title ? { title: paperMods[p.id].title } : {}),
+      ...(paperMods[p.id] && paperMods[p.id].authors ? { authors: paperMods[p.id].authors } : {}),
+      ...(paperMods[p.id] && paperMods[p.id].journal ? { journal: paperMods[p.id].journal } : {}),
+      ...(paperMods[p.id] && paperMods[p.id].year ? { year: paperMods[p.id].year } : {}),
+      ...(paperMods[p.id] && paperMods[p.id].contribution ? { contribution: paperMods[p.id].contribution } : {})
+    }));
+    const topPapers = document.getElementById('top-papers');
+    allPapers.filter(p => p.topCited).slice(0, 6).forEach(p => {
+      topPapers.innerHTML += `
+        <div class="paper-item" onclick="location.href='paper.html?id=${p.id}'">
+          <div class="pi-title-wrap"><span class="pi-title">${p.title}</span><span class="badge-top">高引</span></div>
+          <div class="pi-meta">${p.journal} · ${p.year}</div>
+        </div>`;
+    });
+
+    // 最近动态（与 news.html 同步）
+    const recentNewsData = NewsEditor.getData();
+    const recentNews = document.getElementById('recent-news');
+    recentNewsData.slice(0, 5).forEach(n => {
+      const typeClass = { '\u8bb2\u5ea7':'tag-lecture', '\u83b7\u5956':'tag-award', '\u5a92\u4f53':'tag-media', '\u653f\u7b56':'tag-policy', '\u53d1\u8868':'tag-publish' }[n.type] || 'tag-primary';
+      const titleHtml = n.source
+        ? `<a href="${n.source}" target="_blank" style="color:var(--text);text-decoration:none;">${n.title}</a>`
+        : `<span>${n.title}</span>`;
+      recentNews.innerHTML += `
+        <div class="news-item">
+          <div class="ni-left">
+            <span class="tag ${typeClass}" style="font-size:10px;">${n.type}</span>
+            <span class="ni-title">${titleHtml}</span>
+          </div>
+          <span class="ni-date">${n.date}</span>
+        </div>`;
+    });
+  </script>
+</body>
+</html>

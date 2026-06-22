@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>关键论文 — 刘晓欣</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .papers-layout { display: flex; gap: 24px; }
+    .papers-sidebar { flex: 0 0 200px; position: sticky; top: 70px; align-self: flex-start; }
+    .papers-sidebar h3 { font-family:'SimSun','Songti SC',serif; font-size:16px; color:var(--primary); margin-bottom:12px; }
+    .sidebar-nav a { display:block; padding:6px 12px; font-size:13px; color:var(--text-light); text-decoration:none; border-left:2px solid var(--border); transition:all 0.2s; }
+    .sidebar-nav a:hover { color:var(--primary); border-left-color:var(--primary); background:rgba(75,0,130,0.04); }
+    .sidebar-nav a.active { color:var(--primary); border-left-color:var(--primary); font-weight:600; background:rgba(75,0,130,0.06); }
+    .sidebar-nav .count { font-size:11px; color:var(--text-light); margin-left:4px; }
+    .papers-main { flex:1; min-width:0; }
+    .paper-group { margin-bottom:32px; scroll-margin-top:80px; }
+    .paper-group h3 { font-family:'SimSun','Songti SC',serif; font-size:17px; color:var(--secondary); margin-bottom:12px; padding-left:12px; border-left:3px solid var(--accent); }
+    .paper-card { cursor:pointer; }
+    .paper-card:hover .paper-title-text { color:var(--primary); }
+    .cat-edit { display:inline-flex; align-items:center; gap:4px; margin-left:8px; }
+    .cat-select { font-size:11px; padding:1px 4px; border:1px solid var(--border); border-radius:4px; color:var(--text-light); cursor:pointer; }
+    .view-toggle { display:flex; gap:0; margin-bottom:16px; border:1px solid var(--border); border-radius:6px; overflow:hidden; width:fit-content; }
+    .view-toggle button { padding:8px 20px; font-size:13px; border:none; cursor:pointer; background:#fff; color:var(--text-light); transition:all 0.2s; }
+    .view-toggle button.active { background:var(--primary); color:#fff; }
+    .view-toggle button:not(:last-child) { border-right:1px solid var(--border); }
+    .cat-manager { margin-top:16px; padding:12px; background:rgba(75,0,130,0.04); border-radius:8px; border:1px dashed var(--border); }
+    .cat-manager h4 { font-size:13px; color:var(--primary); margin-bottom:8px; }
+    .cat-list-item { display:flex; align-items:center; gap:6px; margin-bottom:4px; font-size:12px; }
+    .cat-list-item input { font-size:12px; padding:2px 6px; border:1px solid var(--border); border-radius:4px; width:120px; outline:none; }
+    .cat-list-item input:focus { border-color:var(--primary); }
+    .cat-list-item button { font-size:11px; color:#dc3545; background:none; border:none; cursor:pointer; }
+    .cat-add-row { display:flex; gap:4px; margin-top:6px; }
+    .cat-add-row input { font-size:12px; padding:2px 6px; border:1px solid var(--border); border-radius:4px; width:120px; outline:none; }
+    .cat-add-row button { font-size:11px; padding:2px 8px; }
+    .paper-mgmt-btns { display:flex; gap:4px; margin-top:6px; }
+    .paper-mgmt-btns button { font-size:11px; padding:2px 8px; border:none; background:none; cursor:pointer; color:var(--text-light); }
+    .paper-mgmt-btns button:hover { color:var(--primary); }
+    .paper-mgmt-btns .del-btn:hover { color:#dc3545; }
+    @media (max-width:768px) { .papers-layout { flex-direction:column; } .papers-sidebar { position:static; flex:none; } }
+  </style>
+</head>
+<body>
+  <div id="site-header"></div>
+  <div class="container">
+    <section class="section">
+      <h2 class="section-title">关键论文</h2>
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+        <div class="view-toggle">
+          <button class="active" onclick="switchView('topic',this)">按主题</button>
+          <button onclick="switchView('time',this)">按时间</button>
+        </div>
+        <input type="text" id="search-input" class="search-box" placeholder="搜索论文标题、期刊、作者..." style="flex:1;min-width:200px;">
+        <button class="btn btn-outline btn-sm" onclick="toggleCatManager()">管理分类</button>
+      </div>
+
+      <div id="cat-manager" class="cat-manager" style="display:none;"></div>
+
+      <div class="papers-layout">
+        <aside class="papers-sidebar">
+          <h3 id="sidebar-title">论文目录</h3>
+          <nav class="sidebar-nav" id="sidebar-nav"></nav>
+        </aside>
+        <div class="papers-main" id="papers-list"></div>
+      </div>
+
+      <!-- 论文管理区域 -->
+      <div class="paper-mgmt mt-24" style="border-top:1px solid var(--border);padding-top:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h3 style="font-family:'SimSun','Songti SC',serif;font-size:16px;color:var(--primary);margin:0;">论文管理</h3>
+          <button class="btn btn-primary btn-sm" onclick="openAddPaper()">添加论文</button>
+        </div>
+        <p class="text-sm text-light">可添加新论文、编辑已有论文信息、删除论文。PDF 文件仅保存在浏览器本地。</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- 添加/编辑论文弹窗 -->
+  <div class="modal-overlay" id="paper-modal">
+    <div class="modal" style="max-width:560px;">
+      <div class="flex-between mb-16">
+        <h3 style="margin:0;" id="paper-modal-title">添加论文</h3>
+        <button class="edit-icon" onclick="closePaperModal()">✕</button>
+      </div>
+      <input type="hidden" id="edit-paper-id">
+      <div style="margin-bottom:10px;">
+        <label class="text-sm text-light">标题 *</label>
+        <input type="text" id="pm-title" class="search-box" style="margin-top:4px;" placeholder="论文标题">
+      </div>
+      <div style="margin-bottom:10px;">
+        <label class="text-sm text-light">作者</label>
+        <input type="text" id="pm-authors" class="search-box" style="margin-top:4px;" placeholder="作者1, 作者2">
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:10px;">
+        <div style="flex:1;">
+          <label class="text-sm text-light">期刊</label>
+          <input type="text" id="pm-journal" class="search-box" style="margin-top:4px;" placeholder="期刊名称">
+        </div>
+        <div style="flex:0 0 100px;">
+          <label class="text-sm text-light">年份</label>
+          <input type="text" id="pm-year" class="search-box" style="margin-top:4px;" placeholder="2025">
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:10px;">
+        <div style="flex:1;">
+          <label class="text-sm text-light">期号</label>
+          <input type="text" id="pm-issue" class="search-box" style="margin-top:4px;" placeholder="如 第3期">
+        </div>
+        <div style="flex:1;">
+          <label class="text-sm text-light">分类</label>
+          <select id="pm-category" class="search-box" style="margin-top:4px;"></select>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label class="text-sm text-light">贡献/摘要</label>
+        <textarea id="pm-contribution" class="search-box" style="min-height:60px;margin-top:4px;resize:vertical;" placeholder="一句话贡献或论文摘要"></textarea>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label class="text-sm text-light">上传 PDF（可选）</label>
+        <input type="file" id="pm-pdf" accept=".pdf" style="margin-top:4px;font-size:13px;">
+        <div id="pm-pdf-name" class="text-sm text-light" style="margin-top:4px;"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+        <button class="btn btn-outline btn-sm" onclick="closePaperModal()">取消</button>
+        <button class="btn btn-primary btn-sm" onclick="savePaper()">保存</button>
+      </div>
+    </div>
+  </div>
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/editor.js"></script>
+  <script>
+    initPage('papers');
+
+    let currentView = 'topic';
+    let searchText = '';
+
+    // 获取自定义分类（合并默认和用户修改）
+    function getCategories() {
+      const saved = Editor.getData('custom_categories');
+      if (saved) return saved;
+      return PAPER_CATEGORIES.map(c => ({...c}));
+    }
+
+    function saveCategories(cats) {
+      Editor.saveData('custom_categories', cats);
+    }
+
+    function getPapers() {
+      const customPapers = Editor.getData('custom_papers') || [];
+      const mods = PaperMods.getMods();
+      // 过滤已删除的内置论文
+      const builtIn = PAPERS_DATA.filter(p => {
+        const m = mods[p.id];
+        return !m || !m.deleted;
+      });
+      return [...builtIn, ...customPapers].map(p => ({
+        ...p,
+        category: PaperMods.getCategory(p.id, p.category),
+        ...(mods[p.id] && mods[p.id].title ? { title: mods[p.id].title } : {}),
+        ...(mods[p.id] && mods[p.id].authors ? { authors: mods[p.id].authors } : {}),
+        ...(mods[p.id] && mods[p.id].journal ? { journal: mods[p.id].journal } : {}),
+        ...(mods[p.id] && mods[p.id].year ? { year: mods[p.id].year } : {}),
+        ...(mods[p.id] && mods[p.id].issue ? { issue: mods[p.id].issue } : {}),
+        ...(mods[p.id] && mods[p.id].contribution ? { contribution: mods[p.id].contribution } : {}),
+        ...(mods[p.id] && mods[p.id].pdf ? { pdf: mods[p.id].pdf } : {})
+      }));
+    }
+
+    function switchView(view, btn) {
+      currentView = view;
+      document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      buildSidebar();
+      renderPapers();
+    }
+
+    function buildSidebar() {
+      const nav = document.getElementById('sidebar-nav');
+      const title = document.getElementById('sidebar-title');
+      nav.innerHTML = '';
+      const papers = getPapers();
+      const cats = getCategories();
+
+      if (currentView === 'topic') {
+        title.textContent = '论文目录';
+        cats.forEach(cat => {
+          const count = papers.filter(p => p.category === cat.key).length;
+          if (count === 0) return;
+          const a = document.createElement('a');
+          a.href = '#cat-' + cat.key;
+          a.innerHTML = `${cat.label}<span class="count">(${count})</span>`;
+          a.dataset.cat = cat.key;
+          nav.appendChild(a);
+        });
+      } else {
+        title.textContent = '年份目录';
+        const years = [...new Set(papers.map(p => p.year))].sort().reverse();
+        years.forEach(y => {
+          const count = papers.filter(p => p.year === y).length;
+          const a = document.createElement('a');
+          a.href = '#year-' + y;
+          a.innerHTML = `${y}年<span class="count">(${count})</span>`;
+          a.dataset.cat = 'year-' + y;
+          nav.appendChild(a);
+        });
+      }
+    }
+
+    function renderPapers() {
+      const container = document.getElementById('papers-list');
+      container.innerHTML = '';
+      const papers = getPapers();
+      const cats = getCategories();
+
+      let filtered = papers;
+      if (searchText) {
+        filtered = filtered.filter(p =>
+          p.title.toLowerCase().includes(searchText) ||
+          p.journal.toLowerCase().includes(searchText) ||
+          p.authors.toLowerCase().includes(searchText)
+        );
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p class="text-light" style="text-align:center;padding:40px;">未找到匹配的论文</p>';
+        return;
+      }
+
+      if (currentView === 'topic') renderByTopic(container, filtered, cats);
+      else renderByTime(container, filtered);
+    }
+
+    function renderByTopic(container, papers, cats) {
+      const grouped = {};
+      cats.forEach(c => { grouped[c.key] = []; });
+      papers.forEach(p => { if (!grouped[p.category]) grouped[p.category] = []; grouped[p.category].push(p); });
+
+      cats.forEach(cat => {
+        const list = grouped[cat.key];
+        if (!list || list.length === 0) return;
+        list.sort((a, b) => a.title.localeCompare(b.title, 'zh'));
+        const group = document.createElement('div');
+        group.className = 'paper-group';
+        group.id = 'cat-' + cat.key;
+        group.innerHTML = `<h3>${cat.label}（${list.length}篇）</h3>`;
+        list.forEach(p => group.appendChild(createPaperCard(p, cats)));
+        container.appendChild(group);
+      });
+    }
+
+    function renderByTime(container, papers) {
+      const grouped = {};
+      papers.forEach(p => { if (!grouped[p.year]) grouped[p.year] = []; grouped[p.year].push(p); });
+      Object.keys(grouped).sort().reverse().forEach(y => {
+        grouped[y].sort((a, b) => a.title.localeCompare(b.title, 'zh'));
+        const group = document.createElement('div');
+        group.className = 'paper-group';
+        group.id = 'year-' + y;
+        group.innerHTML = `<h3>${y}年（${grouped[y].length}篇）</h3>`;
+        grouped[y].forEach(p => group.appendChild(createPaperCard(p, getCategories())));
+        container.appendChild(group);
+      });
+    }
+
+    function createPaperCard(p, cats) {
+      const el = document.createElement('div');
+      el.className = 'card paper-card';
+      el.style.padding = '16px 20px';
+      const isCustom = String(p.id).startsWith('cp_');
+      el.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div style="flex:1;min-width:0;">
+            <div class="paper-title-text" style="font-size:15px;font-weight:600;color:var(--text);line-height:1.5;transition:color 0.2s;">
+              ${p.title}${p.topCited ? '<span class="badge-top">高引</span>' : ''}
+            </div>
+            <div class="text-sm text-light mt-8">${p.authors} · \u300a${p.journal}\u300b${p.issue || ''} · ${p.year}</div>
+            <div class="text-sm mt-8" style="color:var(--accent);">${p.contribution || (p.abstract ? p.abstract.slice(0,60)+'...' : '')}</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="tag tag-primary" style="font-size:11px;">${p.category}</span>
+          <div class="cat-edit">
+            <select class="cat-select" onchange="changeCat('${p.id}', this.value)" onclick="event.stopPropagation();">
+              ${cats.map(c => `<option value="${c.key}" ${c.key === p.category ? 'selected' : ''}>${c.label}</option>`).join('')}
+            </select>
+          </div>
+          <div class="paper-mgmt-btns" onclick="event.stopPropagation();">
+            <button onclick="openEditPaper('${p.id}')">\u7f16\u8f91</button>
+            <button class="del-btn" onclick="deletePaper('${p.id}')">\u5220\u9664</button>
+          </div>
+        </div>`;
+      el.addEventListener('click', () => location.href = `paper.html?id=${p.id}`);
+      return el;
+    }
+
+    function changeCat(paperId, newCat) {
+      PaperMods.setCategory(paperId, newCat);
+      showToast('\u5206\u7c7b\u5df2\u66f4\u65b0');
+      buildSidebar();
+      renderPapers();
+    }
+
+    // 分类管理器
+    function toggleCatManager() {
+      const el = document.getElementById('cat-manager');
+      if (el.style.display === 'none') {
+        renderCatManager();
+        el.style.display = 'block';
+      } else {
+        el.style.display = 'none';
+      }
+    }
+
+    function renderCatManager() {
+      const cats = getCategories();
+      const el = document.getElementById('cat-manager');
+      el.innerHTML = `
+        <h4>管理分类主题</h4>
+        <p class="text-sm text-light" style="margin-bottom:8px;">可修改分类名称、删除分类、添加新分类。论文会自动归类到对应新名称下。</p>
+        <div id="cat-list-items">
+          ${cats.map((c, i) => `
+            <div class="cat-list-item">
+              <input type="text" value="${c.label}" data-idx="${i}" onchange="renameCat(${i}, this.value)">
+              <button onclick="deleteCat(${i})">删除</button>
+            </div>
+          `).join('')}
+        </div>
+        <div class="cat-add-row">
+          <input type="text" id="new-cat-name" placeholder="新分类名称">
+          <button class="btn btn-primary" style="font-size:11px;padding:2px 10px;" onclick="addCat()">添加</button>
+        </div>`;
+    }
+
+    function renameCat(idx, newName) {
+      const cats = getCategories();
+      const oldKey = cats[idx].key;
+      cats[idx].label = newName;
+      cats[idx].key = newName;
+      // 更新所有使用旧 key 的论文
+      const mods = PaperMods.getMods();
+      getPapers().forEach(p => {
+        const cat = PaperMods.getCategory(p.id, p.category);
+        if (cat === oldKey) PaperMods.setCategory(p.id, newName);
+      });
+      saveCategories(cats);
+      buildSidebar();
+      renderPapers();
+      showToast('分类已重命名');
+    }
+
+    async function deleteCat(idx) {
+      const cats = getCategories();
+      if (cats.length <= 1) { showToast('至少保留一个分类'); return; }
+      const ok = await showConfirm(`确定删除分类"${cats[idx].label}"？该分类下的论文将移至"${cats[0].label}"。`);
+      if (!ok) return;
+      const removedKey = cats[idx].key;
+      const targetKey = cats[0].key;
+      cats.splice(idx, 1);
+      // 将该分类下的论文移到第一个分类
+      getPapers().forEach(p => {
+        if (PaperMods.getCategory(p.id, p.category) === removedKey) {
+          PaperMods.setCategory(p.id, targetKey);
+        }
+      });
+      saveCategories(cats);
+      renderCatManager();
+      buildSidebar();
+      renderPapers();
+      showToast('分类已删除');
+    }
+
+    function addCat() {
+      const name = document.getElementById('new-cat-name').value.trim();
+      if (!name) { showToast('请输入分类名称'); return; }
+      const cats = getCategories();
+      if (cats.find(c => c.key === name)) { showToast('分类已存在'); return; }
+      cats.push({ key: name, label: name });
+      saveCategories(cats);
+      document.getElementById('new-cat-name').value = '';
+      renderCatManager();
+      buildSidebar();
+      renderPapers();
+      showToast('分类已添加');
+    }
+
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      searchText = e.target.value.toLowerCase();
+      renderPapers();
+    });
+
+    function updateSidebarActive() {
+      const groups = document.querySelectorAll('.paper-group');
+      const links = document.querySelectorAll('.sidebar-nav a');
+      let activeCat = null;
+      groups.forEach(g => { if (g.getBoundingClientRect().top <= 120) activeCat = g.id.replace('cat-','').replace('year-','year-'); });
+      links.forEach(a => a.classList.toggle('active', a.dataset.cat === activeCat));
+    }
+    window.addEventListener('scroll', updateSidebarActive);
+
+    buildSidebar();
+    renderPapers();
+    updateSidebarActive();
+
+    // === 论文管理：添加/编辑/删除 ===
+    function getCustomPapers() { return Editor.getData('custom_papers') || []; }
+    function saveCustomPapers(papers) { Editor.saveData('custom_papers', papers); }
+
+    function findPaperById(id) {
+      const all = getPapers();
+      return all.find(p => String(p.id) === String(id));
+    }
+
+    function openAddPaper() {
+      document.getElementById('paper-modal-title').textContent = '\u6dfb\u52a0\u8bba\u6587';
+      document.getElementById('edit-paper-id').value = '';
+      document.getElementById('pm-title').value = '';
+      document.getElementById('pm-authors').value = '';
+      document.getElementById('pm-journal').value = '';
+      document.getElementById('pm-year').value = '';
+      document.getElementById('pm-issue').value = '';
+      document.getElementById('pm-contribution').value = '';
+      document.getElementById('pm-pdf').value = '';
+      document.getElementById('pm-pdf-name').textContent = '';
+      // 填充分类下拉
+      const cats = getCategories();
+      document.getElementById('pm-category').innerHTML = cats.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
+      document.getElementById('paper-modal').classList.add('active');
+    }
+
+    function openEditPaper(id) {
+      event && event.stopPropagation && event.stopPropagation();
+      const paper = findPaperById(id);
+      if (!paper) { showToast('\u672a\u627e\u5230\u8bba\u6587'); return; }
+      document.getElementById('paper-modal-title').textContent = '\u7f16\u8f91\u8bba\u6587';
+      document.getElementById('edit-paper-id').value = id;
+      document.getElementById('pm-title').value = paper.title || '';
+      document.getElementById('pm-authors').value = paper.authors || '';
+      document.getElementById('pm-journal').value = paper.journal || '';
+      document.getElementById('pm-year').value = paper.year || '';
+      document.getElementById('pm-issue').value = paper.issue || '';
+      document.getElementById('pm-contribution').value = paper.abstract || paper.contribution || '';
+      document.getElementById('pm-pdf').value = '';
+      const existingPdf = paper.pdf ? '\u5df2\u6709 PDF \u6587\u4ef6' : '';
+      document.getElementById('pm-pdf-name').textContent = existingPdf;
+      const cats = getCategories();
+      document.getElementById('pm-category').innerHTML = cats.map(c => `<option value="${c.key}" ${c.key === paper.category ? 'selected' : ''}>${c.label}</option>`).join('');
+      document.getElementById('paper-modal').classList.add('active');
+    }
+
+    function closePaperModal() {
+      document.getElementById('paper-modal').classList.remove('active');
+    }
+
+    function savePaper() {
+      const title = document.getElementById('pm-title').value.trim();
+      const authors = document.getElementById('pm-authors').value.trim();
+      const journal = document.getElementById('pm-journal').value.trim();
+      const year = document.getElementById('pm-year').value.trim();
+      const issue = document.getElementById('pm-issue').value.trim();
+      const category = document.getElementById('pm-category').value;
+      const contribution = document.getElementById('pm-contribution').value.trim();
+      const editId = document.getElementById('edit-paper-id').value;
+      const pdfInput = document.getElementById('pm-pdf');
+
+      if (!title) { showToast('\u8bf7\u586b\u5199\u8bba\u6587\u6807\u9898'); return; }
+
+      const handleSave = (pdfDataUrl) => {
+        if (editId) {
+          // 编辑已有论文
+          const isBuiltIn = PAPERS_DATA.some(p => String(p.id) === String(editId));
+          if (isBuiltIn) {
+            // 内置论文：保存修改到 PaperMods
+            PaperMods.setMeta(editId, { title, authors, journal, year, issue, contribution, ...(pdfDataUrl ? { pdf: pdfDataUrl } : {}) });
+          } else {
+            // 自定义论文：更新
+            const customs = getCustomPapers();
+            const idx = customs.findIndex(p => String(p.id) === String(editId));
+            if (idx >= 0) {
+              Object.assign(customs[idx], { title, authors, journal, year, issue, category, contribution });
+              if (pdfDataUrl) customs[idx].pdf = pdfDataUrl;
+              saveCustomPapers(customs);
+            }
+          }
+          showToast('\u8bba\u6587\u5df2\u66f4\u65b0');
+        } else {
+          // 添加新论文
+          const newPaper = {
+            id: 'cp_' + Date.now(),
+            title, authors, journal, year, issue, category,
+            contribution, abstract: contribution,
+            topCited: false,
+            pdf: pdfDataUrl || ''
+          };
+          const customs = getCustomPapers();
+          customs.unshift(newPaper);
+          saveCustomPapers(customs);
+          showToast('\u8bba\u6587\u5df2\u6dfb\u52a0');
+        }
+        closePaperModal();
+        buildSidebar();
+        renderPapers();
+      };
+
+      if (pdfInput.files && pdfInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => handleSave(e.target.result);
+        reader.readAsDataURL(pdfInput.files[0]);
+      } else {
+        handleSave(null);
+      }
+    }
+
+    async function deletePaper(id) {
+      event && event.stopPropagation && event.stopPropagation();
+      const ok = await showConfirm('\u786e\u5b9a\u5220\u9664\u6b64\u8bba\u6587\uff1f');
+      if (!ok) return;
+      const isBuiltIn = PAPERS_DATA.some(p => String(p.id) === String(id));
+      if (isBuiltIn) {
+        // 内置论文：标记删除
+        PaperMods.setMeta(id, { deleted: true });
+      } else {
+        // 自定义论文：直接移除
+        const customs = getCustomPapers().filter(p => String(p.id) !== String(id));
+        saveCustomPapers(customs);
+      }
+      showToast('\u5df2\u5220\u9664');
+      buildSidebar();
+      renderPapers();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学术观点 — 刘晓欣</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .views-layout { display:flex; gap:24px; }
+    .views-nav { flex:0 0 180px; position:sticky; top:70px; align-self:flex-start; }
+    .views-nav h3 { font-family:'SimSun','Songti SC',serif; font-size:14px; color:var(--primary); margin-bottom:10px; }
+    .views-nav a { display:block; padding:6px 12px; font-size:13px; color:var(--text-light); text-decoration:none; border-left:2px solid var(--border); transition:all 0.2s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .views-nav a:hover { color:var(--primary); border-left-color:var(--primary); background:rgba(75,0,130,0.04); }
+    .views-nav a.active { color:var(--primary); border-left-color:var(--primary); font-weight:600; background:rgba(75,0,130,0.06); }
+    .views-main { flex:1; min-width:0; }
+    .paper-link { color:var(--accent); text-decoration:none; transition:color 0.2s; }
+    .paper-link:hover { color:var(--primary); text-decoration:underline; }
+    .view-summary { background:rgba(75,0,130,0.04); border-left:3px solid var(--accent); border-radius:0 6px 6px 0; padding:12px 16px; }
+    .summary-label { font-size:13px; font-weight:600; color:var(--accent); margin-bottom:6px; }
+    .summary-text { font-size:14px; line-height:1.8; color:var(--text); text-indent:2em; }
+    @media (max-width:768px) { .views-layout { flex-direction:column; } .views-nav { position:static; flex:none; } }
+  </style>
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <div class="container">
+    <section class="section">
+      <div class="flex-between mb-16">
+        <h2 class="section-title">学术观点体系</h2>
+        <div class="flex-between gap-8">
+          <button class="btn btn-outline btn-sm" onclick="Editor.showVersionHistory(currentData)">版本历史</button>
+          <button class="btn btn-outline btn-sm" onclick="Editor.exportData()">导出数据</button>
+          <button class="btn btn-outline btn-sm" onclick="Editor.importData(d => { if(d.views) { currentData = d.views; renderViews(currentData); } })">导入数据</button>
+        </div>
+      </div>
+      <div id="views-container" class="views-layout">
+        <nav class="views-nav" id="views-nav">
+          <h3>观点目录</h3>
+        </nav>
+        <div class="views-main" id="views-list"></div>
+      </div>
+      <button class="btn btn-primary mt-16" onclick="addNewModule()">+ 添加模块</button>
+    </section>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/editor.js"></script>
+  <script>
+    initPage('views');
+    let currentData = Editor.getViewsData();
+
+    // 根据论文标题查找 paper id
+    function findPaperId(title) {
+      const p = PAPERS_DATA.find(p => p.title.includes(title) || title.includes(p.title));
+      return p ? p.id : null;
+    }
+
+    function renderViews(data) {
+      currentData = data;
+      const nav = document.getElementById('views-nav');
+      const list = document.getElementById('views-list');
+      const sorted = data.modules.slice().sort((a, b) => a.order - b.order);
+      // 渲染导航
+      nav.innerHTML = '<h3>观点目录</h3>' + sorted.map(m =>
+        `<a href="#${m.id}" data-id="${m.id}">${m.title}</a>`
+      ).join('');
+      // 渲染内容
+      list.innerHTML = '';
+      sorted.forEach(m => {
+        const card = document.createElement('div');
+        card.className = 'card mb-16';
+        card.id = m.id;
+        card.style.scrollMarginTop = '80px';
+        card.innerHTML = `
+          <div class="module-header">
+            <div>
+              <h3 style="font-family:'SimSun','Songti SC',serif;font-size:18px;color:var(--primary);">${m.title}</h3>
+              ${m.subtitle ? `<p class="text-light text-sm">${m.subtitle}</p>` : ''}
+            </div>
+            <div class="flex-between gap-8">
+              <button class="edit-icon" title="编辑" onclick="startEdit('${m.id}')">✎</button>
+              <button class="edit-icon" title="删除" onclick="deleteMod('${m.id}')" style="color:#dc3545;">✕</button>
+            </div>
+          </div>
+          <div class="view-summary mt-16">
+            <p class="summary-label">核心论点</p>
+            <p class="summary-text">${m.summary}</p>
+          </div>
+          <div class="md-content mt-16" id="detail-${m.id}" style="display:none;">
+            ${mdToHtml(m.detail)}
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn btn-outline btn-sm" onclick="toggleDetail('${m.id}', this)">展开详情 ▾</button>
+          </div>
+          ${m.papers && m.papers.length > 0 ? `
+            <div class="mt-16">
+              <p class="text-sm text-light">关联论文：</p>
+              ${m.papers.map(t => {
+                const pid = findPaperId(t);
+                return pid
+                  ? `<a href="paper.html?id=${pid}" class="paper-link" style="display:inline-block;margin:4px 6px 4px 0;font-size:13px;">📄 ${t}</a>`
+                  : `<span class="tag tag-accent mt-8">${t}</span>`;
+              }).join('')}
+            </div>` : ''}
+        `;
+        list.appendChild(card);
+      });
+      updateNavActive();
+    }
+
+    function toggleDetail(id, btn) {
+      const el = document.getElementById('detail-' + id);
+      if (el.style.display === 'none') { el.style.display = 'block'; btn.textContent = '收起 ▴'; }
+      else { el.style.display = 'none'; btn.textContent = '展开详情 ▾'; }
+    }
+
+    function startEdit(moduleId) {
+      const mod = currentData.modules.find(m => m.id === moduleId);
+      if (!mod) return;
+      const card = document.getElementById(moduleId);
+      card.innerHTML = `
+        <h3 style="font-family:'SimSun','Songti SC',serif;font-size:18px;color:var(--primary);margin-bottom:16px;">编辑：${mod.title}</h3>
+        <div style="margin-bottom:12px;">
+          <label class="text-sm text-light">模块标题</label>
+          <input type="text" id="edit-title-${moduleId}" value="${mod.title}" class="search-box" style="margin-top:4px;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="text-sm text-light">副标题</label>
+          <input type="text" id="edit-subtitle-${moduleId}" value="${mod.subtitle || ''}" class="search-box" style="margin-top:4px;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="text-sm text-light">核心论点摘要</label>
+          <textarea id="edit-summary-${moduleId}" class="edit-area" style="min-height:80px;margin-top:4px;">${mod.summary}</textarea>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="text-sm text-light">详细内容（Markdown）</label>
+          <textarea id="edit-detail-${moduleId}" class="edit-area" style="min-height:300px;margin-top:4px;">${mod.detail}</textarea>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="text-sm text-light">关联论文（逗号分隔）</label>
+          <input type="text" id="edit-papers-${moduleId}" value="${(mod.papers || []).join('\uff0c')}" class="search-box" style="margin-top:4px;">
+        </div>
+        <div class="module-actions">
+          <button class="btn btn-primary btn-sm" onclick="saveEdit('${moduleId}')">保存</button>
+          <button class="btn btn-outline btn-sm" onclick="renderViews(currentData)">取消</button>
+        </div>`;
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function saveEdit(moduleId) {
+      const mod = currentData.modules.find(m => m.id === moduleId);
+      if (!mod) return;
+      mod.title = document.getElementById('edit-title-' + moduleId).value;
+      mod.subtitle = document.getElementById('edit-subtitle-' + moduleId).value;
+      mod.summary = document.getElementById('edit-summary-' + moduleId).value;
+      mod.detail = document.getElementById('edit-detail-' + moduleId).value;
+      const papersStr = document.getElementById('edit-papers-' + moduleId).value;
+      mod.papers = papersStr ? papersStr.split(/[,，]/).map(s => s.trim()).filter(Boolean) : [];
+      Editor.saveViews(currentData, 'edit', moduleId);
+      renderViews(currentData);
+    }
+
+    async function deleteMod(moduleId) {
+      const result = await Editor.deleteModule(currentData, moduleId);
+      if (result) renderViews(result);
+    }
+
+    function addNewModule() {
+      currentData = Editor.addModule(currentData);
+      renderViews(currentData);
+    }
+
+    function scrollToHash() {
+      if (location.hash) {
+        const el = document.querySelector(location.hash);
+        if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 300);
+      }
+    }
+
+    renderViews(currentData);
+    scrollToHash();
+    window.addEventListener('hashchange', scrollToHash);
+
+    // 导航高亮
+    function updateNavActive() {
+      const cards = document.querySelectorAll('.views-main .card');
+      const links = document.querySelectorAll('.views-nav a');
+      let activeId = null;
+      cards.forEach(c => { if (c.getBoundingClientRect().top <= 120) activeId = c.id; });
+      links.forEach(a => a.classList.toggle('active', a.dataset.id === activeId));
+    }
+    window.addEventListener('scroll', updateNavActive);
+  </script>
+</body>
+</html>

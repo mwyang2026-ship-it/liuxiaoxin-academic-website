@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>论文详情 — 刘晓欣</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .paper-layout { display:flex; gap:20px; align-items:flex-start; }
+    .paper-main { flex:1; min-width:0; }
+    .paper-sidebar { flex:0 0 240px; position:sticky; top:70px; max-height:calc(100vh - 90px); overflow-y:auto; border-left:1px solid var(--border); padding-left:16px; }
+    .paper-title-block { margin-bottom:20px; }
+    .paper-title-block h2 { font-family:'SimSun','Songti SC',serif; font-size:22px; color:var(--primary); line-height:1.5; margin-bottom:8px; }
+    .paper-meta-line { font-size:14px; color:var(--text-light); margin-bottom:4px; }
+    .paper-abstract { background:rgba(75,0,130,0.04); border-left:3px solid var(--accent); padding:16px 20px; margin:20px 0; border-radius:0 8px 8px 0; }
+    .paper-abstract h4 { font-size:14px; color:var(--accent); margin-bottom:6px; }
+    .paper-abstract p { font-size:14px; line-height:1.8; color:var(--text); }
+    .preview-box { border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-top:20px; background:#fff; }
+    .preview-box iframe { width:100%; height:78vh; border:none; }
+    .preview-tabs { display:flex; border-bottom:1px solid var(--border); }
+    .preview-tab { padding:10px 20px; font-size:13px; cursor:pointer; border:none; background:none; color:var(--text-light); border-bottom:2px solid transparent; }
+    .preview-tab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+    .comment-section { background:#fff; border-radius:6px; }
+    .comment-header { padding:10px 12px; font-size:14px; font-weight:600; color:var(--primary); display:flex; justify-content:space-between; align-items:center; }
+    .comment-count { font-size:12px; color:var(--text-light); font-weight:400; }
+    .comment-list { padding:6px 0; max-height:400px; overflow-y:auto; }
+    .comment-item { padding:8px 12px; margin:4px 8px; border-left:3px solid var(--primary); background:rgba(75,0,130,0.02); border-radius:0 6px 6px 0; }
+    .comment-reply { padding:6px 10px; margin:4px 0 4px 16px; border-left:3px solid var(--accent); background:rgba(184,134,11,0.04); border-radius:0 6px 6px 0; font-size:13px; }
+    .comment-author { font-size:13px; font-weight:600; color:var(--primary); }
+    .comment-reply .comment-author { color:var(--accent); font-size:12px; }
+    .comment-time { font-size:11px; color:var(--text-light); margin-left:6px; }
+    .comment-text { font-size:13px; line-height:1.6; color:var(--text); margin-top:3px; }
+    .comment-reply .comment-text { font-size:12px; }
+    .comment-actions { margin-top:2px; }
+    .comment-actions button { font-size:11px; color:var(--text-light); background:none; border:none; cursor:pointer; padding:0; }
+    .comment-actions button:hover { color:var(--primary); }
+    .comment-form { padding:10px 12px; border-top:1px solid var(--border); }
+    .comment-form input, .comment-form textarea { width:100%; padding:6px 10px; border:1px solid var(--border); border-radius:4px; font-size:13px; margin-bottom:6px; outline:none; font-family:inherit; }
+    .comment-form input:focus, .comment-form textarea:focus { border-color:var(--primary); }
+    .comment-form textarea { min-height:50px; resize:vertical; }
+    .reply-form { padding:4px 10px 4px 20px; }
+    @media (max-width: 900px) {
+      .paper-layout { flex-direction:column; }
+      .paper-sidebar { flex:none; position:static; max-height:none; width:100%; border-left:none; padding-left:0; border-top:1px solid var(--border); padding-top:16px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="site-header"></div>
+  <div class="container">
+    <section class="section">
+      <a href="papers.html" class="text-sm" style="color:var(--primary);text-decoration:none;">&larr; 返回论文列表</a>
+      <div id="paper-content" class="mt-16"></div>
+    </section>
+  </div>
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/editor.js"></script>
+  <script>
+    initPage('papers');
+    const params = new URLSearchParams(location.search);
+    const paperId = parseInt(params.get('id'));
+    const paper = PAPERS_DATA.find(p => p.id === paperId);
+
+    if (!paper) {
+      document.getElementById('paper-content').innerHTML = '<p class="text-light" style="text-align:center;padding:60px;">未找到该论文</p>';
+    } else {
+      document.title = paper.title + ' \u2014 刘晓欣';
+      renderPaper();
+    }
+
+    function renderPaper() {
+      const container = document.getElementById('paper-content');
+      const comments = Comments.getForPaper(paper.id);
+      const cat = PaperMods.getCategory(paper.id, paper.category);
+
+      container.innerHTML = `
+        <div class="paper-layout">
+          <div class="paper-main">
+            <div class="paper-title-block">
+              <h2>${paper.title}${paper.topCited ? '<span class="badge-top">高引</span>' : ''}</h2>
+            </div>
+            ${paper.abstract ? `<div class="paper-abstract"><h4>\u8bba\u6587\u6458\u8981</h4><p>${paper.abstract}</p></div>` : `<div class="paper-abstract"><h4>\u8bba\u6587\u8d21\u732e</h4><p>${paper.contribution}</p></div>`}
+            ${paper.pdf ? `
+              <div class="preview-box">
+                <div class="preview-tabs">
+                  <button class="preview-tab active" onclick="switchTab('preview',this)">PDF \u9884\u89c8</button>
+                  <button class="preview-tab" onclick="switchTab('info',this)">\u8bba\u6587\u4fe1\u606f</button>
+                </div>
+                <div id="tab-preview"><iframe src="${paper.pdf}" title="PDF Preview"></iframe></div>
+                <div id="tab-info" style="display:none;padding:24px;">
+                  <table style="width:100%;font-size:14px;line-height:2;">
+                    <tr><td style="color:var(--text-light);width:80px;">\u6807\u9898</td><td>${paper.title}</td></tr>
+                    <tr><td style="color:var(--text-light);">\u4f5c\u8005</td><td>${paper.authors}</td></tr>
+                    <tr><td style="color:var(--text-light);">\u671f\u520a</td><td>\u300a${paper.journal}\u300b</td></tr>
+                    <tr><td style="color:var(--text-light);">\u5e74\u4efd</td><td>${paper.year}</td></tr>
+                    <tr><td style="color:var(--text-light);">\u5206\u7c7b</td><td>${cat}</td></tr>
+                  </table>
+                  <a href="${paper.pdf}" target="_blank" class="btn btn-primary btn-sm mt-16">\u4e0b\u8f7d PDF</a>
+                </div>
+              </div>` : '<div class="card mt-16" style="text-align:center;padding:30px;color:var(--text-light);">\u6682\u65e0 PDF \u6587\u4ef6</div>'}
+          </div>
+          <div class="paper-sidebar">
+            <div class="comment-section">
+              <div class="comment-header">\u8bc4\u8bba <span class="comment-count" id="comment-count">${comments.length} \u6761</span></div>
+              <div class="comment-list" id="comment-list"></div>
+              <div class="comment-form">
+                <input type="text" id="comment-author" placeholder="\u4f60\u7684\u540d\u5b57" maxlength="20">
+                <textarea id="comment-text" placeholder="\u5199\u4e0b\u4f60\u7684\u7406\u89e3\u4e0e\u770b\u6cd5..."></textarea>
+                <button class="btn btn-primary btn-sm" onclick="submitComment()">\u53d1\u8868\u8bc4\u8bba</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      renderComments(comments);
+    }
+
+    function switchTab(tab, btn) {
+      document.getElementById('tab-preview').style.display = tab === 'preview' ? 'block' : 'none';
+      document.getElementById('tab-info').style.display = tab === 'info' ? 'block' : 'none';
+      btn.parentElement.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    function renderComments(comments) {
+      const list = document.getElementById('comment-list');
+      const count = document.getElementById('comment-count');
+      const total = comments.reduce((s, c) => s + 1 + (c.replies ? c.replies.length : 0), 0);
+      count.textContent = total + ' \u6761';
+      list.innerHTML = '';
+      if (comments.length === 0) { list.innerHTML = '<p class="text-light" style="padding:12px;text-align:center;font-size:13px;">\u6682\u65e0\u8bc4\u8bba\uff0c\u6765\u5199\u4e0b\u7b2c\u4e00\u6761\u5427</p>'; return; }
+      comments.forEach(c => {
+        const item = document.createElement('div'); item.className = 'comment-item';
+        item.innerHTML = `
+          <div><span class="comment-author">${escHtml(c.author)}</span><span class="comment-time">${formatTimestamp(c.timestamp)}</span></div>
+          <div class="comment-text">${escHtml(c.text)}</div>
+          <div class="comment-actions">
+            <button onclick="toggleReply('${c.id}')">\u56de\u590d</button>
+            <button onclick="deleteComment('${c.id}')">\u5220\u9664</button>
+          </div>
+          <div id="reply-form-${c.id}" style="display:none;" class="reply-form">
+            <input type="text" id="reply-author-${c.id}" placeholder="\u4f60\u7684\u540d\u5b57" maxlength="20">
+            <textarea id="reply-text-${c.id}" placeholder="\u56de\u590d..." style="min-height:40px;"></textarea>
+            <button class="btn btn-primary btn-sm" style="font-size:12px;" onclick="submitReply('${c.id}')">\u56de\u590d</button>
+          </div>
+          ${(c.replies||[]).map(r=>`<div class="comment-reply"><div><span class="comment-author">${escHtml(r.author)}</span><span class="comment-time">${formatTimestamp(r.timestamp)}</span></div><div class="comment-text">${escHtml(r.text)}</div><div class="comment-actions"><button onclick="deleteComment('${r.id}','${c.id}')">\u5220\u9664</button></div></div>`).join('')}`;
+        list.appendChild(item);
+      });
+    }
+
+    function submitComment() {
+      const author = document.getElementById('comment-author').value.trim();
+      const text = document.getElementById('comment-text').value.trim();
+      if (!author || !text) { showToast('\u8bf7\u586b\u5199\u540d\u5b57\u548c\u8bc4\u8bba'); return; }
+      document.getElementById('comment-text').value = '';
+      renderComments(Comments.add(paper.id, author, text));
+    }
+    function toggleReply(id) { const el = document.getElementById('reply-form-'+id); el.style.display = el.style.display==='none'?'block':'none'; }
+    function submitReply(id) {
+      const author = document.getElementById('reply-author-'+id).value.trim();
+      const text = document.getElementById('reply-text-'+id).value.trim();
+      if (!author || !text) { showToast('\u8bf7\u586b\u5199\u540d\u5b57\u548c\u56de\u590d'); return; }
+      renderComments(Comments.add(paper.id, author, text, id));
+    }
+    async function deleteComment(cid, pid) {
+      if (!await showConfirm('\u786e\u5b9a\u5220\u9664\u6b64\u8bc4\u8bba\uff1f')) return;
+      renderComments(Comments.delete(paper.id, cid, !!pid, pid));
+    }
+  </script>
+</body>
+</html>

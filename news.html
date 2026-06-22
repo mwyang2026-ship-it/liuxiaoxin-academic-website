@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学术新闻 — 刘晓欣</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .method-tabs { display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:16px; }
+    .method-tab { padding:10px 24px; font-size:14px; border:none; background:none; color:var(--text-light); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.2s; }
+    .method-tab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+    .method-panel { display:none; }
+    .method-panel.active { display:block; }
+    .smart-input { width:100%; min-height:120px; padding:12px; border:2px dashed var(--border); border-radius:8px; font-size:14px; line-height:1.7; font-family:inherit; resize:vertical; outline:none; transition:border-color 0.2s; background:rgba(75,0,130,0.02); }
+    .smart-input:focus { border-color:var(--primary); border-style:solid; background:#fff; }
+    .parse-result { background:rgba(75,0,130,0.04); border-radius:8px; padding:16px; margin-top:12px; display:none; }
+    .parse-result.show { display:block; }
+    .parse-result h4 { color:var(--primary); font-size:14px; margin-bottom:8px; }
+    .parse-field { margin-bottom:6px; font-size:13px; }
+    .parse-field label { color:var(--text-light); display:inline-block; width:50px; }
+    .ext-box { background:rgba(75,0,130,0.05); border:2px solid var(--primary); border-radius:10px; padding:20px; margin-bottom:20px; }
+    .ext-box h4 { color:var(--primary); font-size:15px; margin-bottom:8px; }
+    .ext-step { font-size:13px; line-height:1.8; color:var(--text); }
+    .ext-step ol { padding-left:20px; }
+    .ext-step code { background:rgba(75,0,130,0.08); padding:2px 6px; border-radius:3px; font-size:12px; }
+  </style>
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <div class="container">
+    <section class="section">
+      <h2 class="section-title">学术新闻</h2>
+      <div class="timeline" id="news-timeline"></div>
+    </section>
+
+    <section class="section" style="padding-top:0;">
+      <h2 class="section-title">添加新闻</h2>
+
+      <!-- Chrome 扩展 -->
+      <div class="ext-box">
+        <h4>快捷工具：Chrome 扩展</h4>
+        <p class="text-sm text-light mb-8">安装扩展后，在任意网页点击扩展图标即可一键提取内容到剪贴板，然后在此页面「智能粘贴」处粘贴即可</p>
+        <div style="margin-bottom:12px;">
+          <a href="extension/news-capture-extension.zip" download class="btn btn-primary btn-sm" style="text-decoration:none;">下载扩展程序（ZIP）</a>
+          <span class="text-sm text-light" style="margin-left:8px;">下载后解压，按下方步骤安装</span>
+        </div>
+        <div class="ext-step">
+          <ol>
+            <li>点击上方按钮下载 ZIP 文件并解压</li>
+            <li>打开 Chrome，地址栏输入 <code>chrome://extensions</code></li>
+            <li>右上角开启「开发者模式」</li>
+            <li>点击「加载已解压的扩展程序」，选择解压后的文件夹</li>
+            <li>安装完成！在任意网页点击工具栏的扩展图标，内容会自动复制到剪贴板</li>
+            <li>回到本页面，在「智能粘贴」处粘贴即可添加为新闻</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="method-tabs">
+        <button class="method-tab active" onclick="switchMethod('smart',this)">智能粘贴</button>
+        <button class="method-tab" onclick="switchMethod('url',this)">输入链接</button>
+        <button class="method-tab" onclick="switchMethod('manual',this)">手动填写</button>
+      </div>
+
+      <!-- 智能粘贴 -->
+      <div class="method-panel active" id="panel-smart">
+        <p class="text-sm text-light mb-8">从微信、浏览器或其他来源<strong>复制文章全文</strong>，粘贴到下方，自动提取标题、日期、正文</p>
+        <textarea id="smart-paste" class="smart-input" placeholder="在此粘贴文章内容，系统会自动识别标题、日期、正文..."></textarea>
+        <div class="parse-result" id="parse-result">
+          <h4>已识别以下内容，确认无误后点击「添加」</h4>
+          <div class="parse-field" style="font-size:16px;font-weight:600;color:var(--text);" id="pr-title"></div>
+          <div class="parse-field"><label>日期：</label><span id="pr-date"></span></div>
+          <div class="parse-field"><label>摘要：</label><span id="pr-content"></span></div>
+          <button class="btn btn-primary btn-sm mt-8" onclick="confirmSmart()">确认添加</button>
+          <button class="btn btn-outline btn-sm mt-8" onclick="cancelSmart()">取消</button>
+        </div>
+      </div>
+
+      <!-- 输入链接 -->
+      <div class="method-panel" id="panel-url">
+        <p class="text-sm text-light mb-8">输入网页链接，自动抓取页面内容（部分网站可能无法抓取）</p>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="url-input" class="search-box" placeholder="https://..." style="flex:1;">
+          <button class="btn btn-primary" id="parse-url-btn" onclick="parseUrl()">解析</button>
+        </div>
+        <div id="parse-status" class="text-sm mt-8" style="display:none;"></div>
+      </div>
+
+      <!-- 手动填写 -->
+      <div class="method-panel" id="panel-manual">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+          <div style="flex:1;min-width:150px;">
+            <label class="text-sm text-light">日期</label>
+            <input type="text" id="news-date" class="search-box" placeholder="如 2025-03" style="margin-top:4px;">
+          </div>
+          <div style="flex:1;min-width:150px;">
+            <label class="text-sm text-light">类型</label>
+            <select id="news-type" class="search-box" style="margin-top:4px;">
+              <option value="发表">发表</option>
+              <option value="讲座">讲座</option>
+              <option value="获奖">获奖</option>
+              <option value="媒体">媒体</option>
+              <option value="政策">政策</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="text-sm text-light">标题</label>
+          <input type="text" id="news-title" class="search-box" placeholder="新闻标题" style="margin-top:4px;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="text-sm text-light">内容</label>
+          <textarea id="news-content" class="edit-area" style="min-height:100px;margin-top:4px;" placeholder="新闻简述..."></textarea>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="text-sm text-light">来源链接（可选）</label>
+          <input type="text" id="news-source" class="search-box" placeholder="https://..." style="margin-top:4px;">
+        </div>
+        <button class="btn btn-primary" onclick="addManualNews()">添加</button>
+      </div>
+
+      <!-- 数据管理 -->
+      <div class="flex-between mt-24">
+        <div></div>
+        <div class="flex-between gap-8">
+          <button class="btn btn-outline btn-sm" onclick="Editor.exportData()">导出数据</button>
+          <button class="btn btn-outline btn-sm" onclick="Editor.importData(d => { if(d.news) renderNews(d.news); })">导入数据</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/url-parser.js"></script>
+  <script>
+    initPage('news');
+
+    let newsData = NewsEditor.getData();
+
+    // 切换输入方式
+    function switchMethod(method, btn) {
+      document.querySelectorAll('.method-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.method-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + method).classList.add('active');
+    }
+
+    // === 智能粘贴 ===
+    const smartPaste = document.getElementById('smart-paste');
+    let smartParsed = null;
+
+    smartPaste.addEventListener('paste', () => {
+      setTimeout(() => {
+        const text = smartPaste.value.trim();
+        if (!text) return;
+        if (/^https?:\/\//.test(text)) {
+          switchMethod('url', document.querySelectorAll('.method-tab')[1]);
+          document.getElementById('url-input').value = text;
+          smartPaste.value = '';
+          parseUrl();
+          return;
+        }
+        smartParsed = UrlParser.parseWechatPaste(text);
+        if (smartParsed && smartParsed.title) {
+          document.getElementById('pr-title').textContent = smartParsed.title;
+          document.getElementById('pr-date').textContent = smartParsed.date || '未识别';
+          document.getElementById('pr-content').textContent = smartParsed.content.slice(0, 200) + (smartParsed.content.length > 200 ? '...' : '');
+          document.getElementById('parse-result').classList.add('show');
+        }
+      }, 100);
+    });
+
+    function confirmSmart() {
+      if (!smartParsed) return;
+      newsData = NewsEditor.add(newsData, {
+        title: smartParsed.title,
+        date: smartParsed.date || new Date().toISOString().slice(0, 7),
+        type: '媒体',
+        content: smartParsed.content,
+        source: smartParsed.source || ''
+      });
+      renderNews(newsData);
+      smartPaste.value = '';
+      document.getElementById('parse-result').classList.remove('show');
+      smartParsed = null;
+    }
+
+    function cancelSmart() {
+      document.getElementById('parse-result').classList.remove('show');
+      smartParsed = null;
+    }
+
+    // === URL 解析 ===
+    async function parseUrl() {
+      const url = document.getElementById('url-input').value.trim();
+      const status = document.getElementById('parse-status');
+      const btn = document.getElementById('parse-url-btn');
+      if (!url) { showToast('请输入链接'); return; }
+      btn.disabled = true; btn.textContent = '解析中...';
+      status.style.display = 'block'; status.style.color = 'var(--text-light)';
+      status.textContent = '正在获取网页内容，请稍候...';
+      const result = await UrlParser.parse(url);
+      btn.disabled = false; btn.textContent = '解析';
+      if (result.success) {
+        const d = result.data;
+        newsData = NewsEditor.add(newsData, { title: d.title, date: d.date || new Date().toISOString().slice(0,7), type: '媒体', content: d.content, source: url });
+        renderNews(newsData);
+        document.getElementById('url-input').value = '';
+        status.style.color = 'green'; status.textContent = '解析成功，已自动添加！';
+        setTimeout(() => { status.style.display = 'none'; }, 3000);
+      } else {
+        status.style.color = '#dc3545'; status.textContent = result.message + ' 请改用「智能粘贴」方式。';
+      }
+    }
+
+    document.getElementById('url-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') parseUrl(); });
+
+    // === 手动填写 ===
+    function addManualNews() {
+      const title = document.getElementById('news-title').value.trim();
+      const date = document.getElementById('news-date').value.trim();
+      const type = document.getElementById('news-type').value;
+      const content = document.getElementById('news-content').value.trim();
+      const source = document.getElementById('news-source').value.trim();
+      if (!title || !date) { showToast('请填写标题和日期'); return; }
+      newsData = NewsEditor.add(newsData, { title, date, type, content, source });
+      renderNews(newsData);
+      document.getElementById('news-title').value = '';
+      document.getElementById('news-date').value = '';
+      document.getElementById('news-content').value = '';
+      document.getElementById('news-source').value = '';
+    }
+
+    // === Chrome 扩展数据接收 ===
+    function checkExtensionData() {
+      const hash = location.hash;
+      if (hash.startsWith('#ext=')) {
+        try {
+          const data = JSON.parse(decodeURIComponent(escape(atob(hash.slice(5)))));
+          if (data && data.title) {
+            newsData = NewsEditor.add(newsData, {
+              title: data.title,
+              date: data.date || new Date().toISOString().slice(0, 7),
+              type: '媒体',
+              content: data.content || '',
+              source: data.source || ''
+            });
+            renderNews(newsData);
+            showToast('已从扩展导入内容，请确认');
+            history.replaceState(null, '', 'news.html');
+          }
+        } catch (e) {
+          console.error('Failed to parse extension data:', e);
+        }
+      }
+    }
+
+    // === 渲染新闻 ===
+    function renderNews(data) {
+      newsData = data || newsData;
+      const container = document.getElementById('news-timeline');
+      container.innerHTML = '';
+      const byYear = {};
+      newsData.forEach(n => {
+        const year = n.date ? n.date.split('-')[0] : '未知';
+        if (!byYear[year]) byYear[year] = [];
+        byYear[year].push(n);
+      });
+      Object.keys(byYear).sort().reverse().forEach(year => {
+        const yearHeader = document.createElement('div');
+        yearHeader.style.cssText = 'font-family:SimSun,Songti SC,serif;font-size:20px;color:var(--primary);margin:24px 0 16px;font-weight:700;';
+        yearHeader.textContent = year;
+        container.appendChild(yearHeader);
+        byYear[year].forEach(n => {
+          const typeClass = { '\u8bb2\u5ea7':'tag-lecture', '\u83b7\u5956':'tag-award', '\u5a92\u4f53':'tag-media', '\u653f\u7b56':'tag-policy', '\u53d1\u8868':'tag-publish' }[n.type] || 'tag-primary';
+          const titleHtml = n.source
+            ? `<a href="${n.source}" target="_blank" class="title news-title-link">${n.title}</a>`
+            : `<span class="title">${n.title}</span>`;
+          // 内容分段：按换行分段，首行缩进
+          let contentHtml = '';
+          if (n.content) {
+            const paras = n.content.split(/\n+/).filter(p => p.trim());
+            contentHtml = paras.map(p => `<p>${p.trim()}</p>`).join('');
+          }
+          const item = document.createElement('div');
+          item.className = 'timeline-item';
+          item.innerHTML = `
+            <div class="flex-between">
+              <div><span class="tag ${typeClass}">${n.type}</span>${titleHtml}</div>
+              <button class="edit-icon" onclick="deleteNews('${n.id}')" style="color:#dc3545;font-size:14px;">\u2715</button>
+            </div>
+            <div class="date">${n.date}</div>
+            <div class="content collapsed" id="nc-${n.id}">${contentHtml}</div>
+            <a href="javascript:void(0)" class="text-sm" style="color:var(--primary);display:none;" id="nt-${n.id}" onclick="toggleNewsContent('${n.id}')">展开全文 ▾</a>
+            ${n.source ? `<a href="${n.source}" target="_blank" class="text-sm" style="color:var(--primary);margin-left:8px;">查看来源 →</a>` : ''}`;
+          container.appendChild(item);
+          // 检查是否溢出
+          const contentEl = item.querySelector('.content');
+          const toggleBtn = document.getElementById('nt-' + n.id);
+          if (contentEl && contentEl.scrollHeight > contentEl.clientHeight + 4) {
+            toggleBtn.style.display = 'inline-block';
+          }
+        });
+      });
+    }
+
+    async function deleteNews(id) {
+      const result = await NewsEditor.delete(newsData, id);
+      if (result) renderNews(result);
+    }
+
+    function toggleNewsContent(id) {
+      const el = document.getElementById('nc-' + id);
+      const btn = document.getElementById('nt-' + id);
+      if (el.classList.contains('collapsed')) {
+        el.classList.remove('collapsed');
+        btn.textContent = '收起 ▴';
+      } else {
+        el.classList.add('collapsed');
+        btn.textContent = '展开全文 ▾';
+      }
+    }
+
+    renderNews(newsData);
+    checkExtensionData();
+  </script>
+</body>
+</html>

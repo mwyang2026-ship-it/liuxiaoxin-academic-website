@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>其他信息 — 刘晓欣</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Tab 切换 */
+    .tab-bar { display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:24px; }
+    .tab-btn { padding:12px 28px; font-size:15px; font-weight:500; border:none; background:none; color:var(--text-light); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.2s; }
+    .tab-btn:hover { color:var(--primary); }
+    .tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+
+    /* 照片剪影 */
+    .photo-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:20px; }
+    .photo-card { border-radius:8px; overflow:hidden; background:#fff; box-shadow:var(--shadow); border:1px solid var(--border); transition:transform 0.2s, box-shadow 0.2s; position:relative; }
+    .photo-card:hover { transform:translateY(-3px); box-shadow:0 6px 20px rgba(0,0,0,0.12); }
+    .photo-card img { width:100%; height:280px; object-fit:cover; display:block; cursor:pointer; }
+    .photo-card .caption { padding:12px 16px; font-size:14px; color:var(--text); text-align:center; font-family:'SimSun','Songti SC',serif; }
+    .photo-card .photo-actions { position:absolute; top:8px; right:8px; display:flex; gap:4px; opacity:0; transition:opacity 0.2s; }
+    .photo-card:hover .photo-actions { opacity:1; }
+    .photo-actions button { width:28px; height:28px; border-radius:50%; border:none; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.9); color:var(--text-light); box-shadow:0 1px 4px rgba(0,0,0,0.2); }
+    .photo-actions button:hover { background:#fff; color:var(--primary); }
+    .photo-actions .del-btn:hover { color:#dc3545; }
+    .lightbox-overlay { display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.85); z-index:2000; justify-content:center; align-items:center; cursor:pointer; }
+    .lightbox-overlay.active { display:flex; }
+    .lightbox-overlay img { max-width:90%; max-height:90vh; object-fit:contain; border-radius:4px; }
+    .upload-zone { border:2px dashed var(--border); border-radius:8px; padding:40px 20px; text-align:center; cursor:pointer; transition:border-color 0.2s, background 0.2s; background:rgba(75,0,130,0.02); }
+    .upload-zone:hover { border-color:var(--primary); background:rgba(75,0,130,0.05); }
+    .upload-zone p { color:var(--text-light); font-size:14px; margin:8px 0 0; }
+
+    /* 高效 Prompt */
+    .prompt-list { display:flex; flex-direction:column; gap:16px; }
+    .prompt-card { background:var(--card-bg); border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid var(--border); padding:20px 24px; position:relative; transition:transform 0.2s, box-shadow 0.2s; }
+    .prompt-card:hover { transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,0.12); }
+    .prompt-card .prompt-title { font-size:16px; font-weight:600; color:var(--text); margin-bottom:8px; }
+    .prompt-card .prompt-desc { font-size:13px; color:var(--text-light); margin-bottom:10px; line-height:1.6; }
+    .prompt-card .prompt-body { background:rgba(75,0,130,0.04); border-left:3px solid var(--accent); padding:12px 16px; border-radius:0 6px 6px 0; font-size:13px; line-height:1.8; white-space:pre-wrap; word-break:break-all; max-height:200px; overflow-y:auto; position:relative; }
+    .prompt-card .prompt-body.expanded { max-height:none; }
+    .prompt-card .prompt-body.collapsed::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2.5em; background:linear-gradient(to bottom, transparent, rgba(75,0,130,0.04)); pointer-events:none; }
+    .prompt-actions { position:absolute; top:12px; right:16px; display:flex; gap:6px; }
+    .prompt-actions button { font-size:13px; background:none; border:none; cursor:pointer; color:var(--text-light); padding:2px; }
+    .prompt-actions button:hover { color:var(--primary); }
+    .prompt-actions .del-btn:hover { color:#dc3545; }
+    .prompt-toggle { font-size:12px; color:var(--primary); cursor:pointer; background:none; border:none; margin-top:6px; }
+    .prompt-toggle:hover { text-decoration:underline; }
+    .add-form { background:rgba(75,0,130,0.03); border:2px dashed var(--border); border-radius:8px; padding:20px; margin-top:20px; }
+    .add-form input, .add-form textarea { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:14px; margin-bottom:10px; outline:none; font-family:inherit; }
+    .add-form input:focus, .add-form textarea:focus { border-color:var(--primary); }
+  </style>
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <div class="container">
+    <section class="section">
+      <h2 class="section-title">其他信息</h2>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('photos',this)">照片剪影</button>
+        <button class="tab-btn" onclick="switchTab('prompts',this)">高效Prompt</button>
+      </div>
+
+      <!-- 照片剪影 -->
+      <div class="tab-panel active" id="panel-photos">
+        <p class="text-light text-sm mb-16">记录学术与生活的瞬间</p>
+        <div class="photo-grid" id="photo-grid"></div>
+        <div class="upload-zone mt-24" onclick="document.getElementById('photo-upload').click()">
+          <div style="font-size:32px;color:var(--primary);">+</div>
+          <p>点击上传新照片</p>
+          <input type="file" id="photo-upload" accept="image/*" style="display:none;" onchange="uploadPhoto(this)">
+        </div>
+      </div>
+
+      <!-- 高效 Prompt -->
+      <div class="tab-panel" id="panel-prompts">
+        <p class="text-light text-sm mb-16">学术研究与教学中的高效 Prompt 合集</p>
+        <div class="prompt-list" id="prompt-list"></div>
+        <div class="add-form">
+          <strong style="font-size:14px;color:var(--primary);">添加 Prompt</strong>
+          <input type="text" id="prompt-title" placeholder="Prompt 标题（如：文献综述辅助）">
+          <input type="text" id="prompt-desc" placeholder="简要描述（可选）">
+          <textarea id="prompt-body" placeholder="Prompt 正文..." style="min-height:80px;resize:vertical;"></textarea>
+          <button class="btn btn-primary" onclick="addPrompt()">添加</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 灯箱 -->
+  <div class="lightbox-overlay" id="lightbox" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="">
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/editor.js"></script>
+  <script>
+    initPage('about');
+
+    // === Tab 切换 ===
+    function switchTab(name, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + name).classList.add('active');
+    }
+
+    // === 照片剪影 ===
+    const DEFAULT_PHOTOS = [
+      { id: 'p1', src: 'photos/博士照.jpg', caption: '博士照', builtin: true },
+      { id: 'p2', src: 'photos/个人照.jpeg', caption: '个人照', builtin: true },
+      { id: 'p3', src: 'photos/生活照.jpg', caption: '生活照', builtin: true },
+      { id: 'p4', src: 'photos/避虚就实.jpg', caption: '避虚就实', builtin: true },
+      { id: 'p5', src: 'photos/虚拟经济学剪影 1.png', caption: '虚拟经济学剪影', builtin: true }
+    ];
+
+    function getPhotos() {
+      const saved = Editor.getData('photos_data');
+      if (saved) return saved;
+      return DEFAULT_PHOTOS.map(p => ({...p}));
+    }
+    function savePhotos(photos) { Editor.saveData('photos_data', photos); }
+
+    function renderPhotos() {
+      const photos = getPhotos();
+      const grid = document.getElementById('photo-grid');
+      if (photos.length === 0) {
+        grid.innerHTML = '<p class="text-light" style="text-align:center;padding:40px;grid-column:1/-1;">暂无照片</p>';
+        return;
+      }
+      grid.innerHTML = photos.map(p => `
+        <div class="photo-card">
+          <img src="${p.src}" alt="${escHtml(p.caption)}" onclick="openLightbox('${p.id}')">
+          <div class="photo-actions">
+            <button onclick="event.stopPropagation();renamePhoto('${p.id}')" title="\u91cd\u547d\u540d">\u270e</button>
+            <button class="del-btn" onclick="event.stopPropagation();deletePhoto('${p.id}')" title="\u5220\u9664">\u2715</button>
+          </div>
+          <div class="caption">${escHtml(p.caption)}</div>
+        </div>
+      `).join('');
+    }
+
+    function openLightbox(id) {
+      const photos = getPhotos();
+      const photo = photos.find(p => p.id === id);
+      if (!photo) return;
+      document.getElementById('lightbox-img').src = photo.src;
+      document.getElementById('lightbox').classList.add('active');
+    }
+    function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+
+    function uploadPhoto(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      if (file.size > 5 * 1024 * 1024) { showToast('\u56fe\u7247\u4e0d\u80fd\u8d85\u8fc7 5MB'); return; }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const name = file.name.replace(/\.[^.]+$/, '');
+        const photos = getPhotos();
+        photos.push({ id: 'ph_' + Date.now(), src: e.target.result, caption: name, builtin: false });
+        savePhotos(photos);
+        renderPhotos();
+        showToast('\u7167\u7247\u5df2\u6dfb\u52a0');
+      };
+      reader.readAsDataURL(file);
+      input.value = '';
+    }
+
+    async function renamePhoto(id) {
+      const photos = getPhotos();
+      const photo = photos.find(p => p.id === id);
+      if (!photo) return;
+      const newName = prompt('\u8bf7\u8f93\u5165\u65b0\u540d\u79f0\uff1a', photo.caption);
+      if (newName === null || newName.trim() === '') return;
+      photo.caption = newName.trim();
+      savePhotos(photos);
+      renderPhotos();
+      showToast('\u5df2\u91cd\u547d\u540d');
+    }
+
+    async function deletePhoto(id) {
+      const ok = await showConfirm('\u786e\u5b9a\u5220\u9664\u6b64\u7167\u7247\uff1f');
+      if (!ok) return;
+      const photos = getPhotos().filter(p => p.id !== id);
+      savePhotos(photos);
+      renderPhotos();
+      showToast('\u5df2\u5220\u9664');
+    }
+
+    renderPhotos();
+
+    // === 高效 Prompt ===
+    const PROMPT_KEY = 'prompts_data';
+    function getPrompts() { return Editor.getData(PROMPT_KEY) || []; }
+    function savePrompts(data) { Editor.saveData(PROMPT_KEY, data); }
+
+    function addPrompt() {
+      const title = document.getElementById('prompt-title').value.trim();
+      const body = document.getElementById('prompt-body').value.trim();
+      if (!title || !body) { showToast('\u8bf7\u586b\u5199\u6807\u9898\u548c\u6b63\u6587'); return; }
+      const prompts = getPrompts();
+      prompts.unshift({
+        id: 'pr_' + Date.now(),
+        title: title,
+        desc: document.getElementById('prompt-desc').value.trim(),
+        body: body,
+        timestamp: Date.now()
+      });
+      savePrompts(prompts);
+      document.getElementById('prompt-title').value = '';
+      document.getElementById('prompt-desc').value = '';
+      document.getElementById('prompt-body').value = '';
+      renderPrompts();
+      showToast('\u5df2\u6dfb\u52a0');
+    }
+
+    async function deletePrompt(id) {
+      const ok = await showConfirm('\u786e\u5b9a\u5220\u9664\u6b64 Prompt\uff1f');
+      if (!ok) return;
+      const prompts = getPrompts().filter(p => p.id !== id);
+      savePrompts(prompts);
+      renderPrompts();
+    }
+
+    function togglePromptBody(id) {
+      const el = document.getElementById('pb-' + id);
+      const btn = document.getElementById('pt-' + id);
+      if (el.classList.contains('collapsed')) {
+        el.classList.remove('collapsed');
+        el.classList.add('expanded');
+        btn.textContent = '\u6536\u8d77 \u25b4';
+      } else {
+        el.classList.remove('expanded');
+        el.classList.add('collapsed');
+        btn.textContent = '\u5c55\u5f00\u5168\u6587 \u25be';
+      }
+    }
+
+    function renderPrompts() {
+      const prompts = getPrompts();
+      const container = document.getElementById('prompt-list');
+      if (prompts.length === 0) {
+        container.innerHTML = '<p class="text-light" style="text-align:center;padding:40px;">暂无 Prompt</p>';
+        return;
+      }
+      container.innerHTML = prompts.map(p => `
+        <div class="prompt-card">
+          <div class="prompt-actions">
+            <button onclick="copyPrompt('${p.id}')" title="\u590d\u5236">\u2668</button>
+            <button class="del-btn" onclick="deletePrompt('${p.id}')" title="\u5220\u9664">\u2715</button>
+          </div>
+          <div class="prompt-title">${escHtml(p.title)}</div>
+          ${p.desc ? `<div class="prompt-desc">${escHtml(p.desc)}</div>` : ''}
+          <div class="prompt-body collapsed" id="pb-${p.id}">${escHtml(p.body)}</div>
+          <button class="prompt-toggle" id="pt-${p.id}" onclick="togglePromptBody('${p.id}')">\u5c55\u5f00\u5168\u6587 \u25be</button>
+        </div>
+      `).join('');
+    }
+
+    function copyPrompt(id) {
+      const prompts = getPrompts();
+      const p = prompts.find(x => x.id === id);
+      if (!p) return;
+      navigator.clipboard.writeText(p.body).then(() => {
+        showToast('\u5df2\u590d\u5236\u5230\u526a\u8d34\u677f');
+      }).catch(() => {
+        // fallback
+        const ta = document.createElement('textarea');
+        ta.value = p.body;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('\u5df2\u590d\u5236');
+      });
+    }
+
+    renderPrompts();
+  </script>
+</body>
+</html>
