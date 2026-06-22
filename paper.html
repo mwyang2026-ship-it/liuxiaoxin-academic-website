@@ -17,8 +17,6 @@
     .paper-abstract p { font-size:14px; line-height:1.8; color:var(--text); }
     .preview-box { border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-top:20px; background:#fff; }
     .preview-box iframe { width:100%; height:78vh; border:none; }
-    .pdf-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; height:50vh; color:var(--text-light); gap:16px; }
-    .pdf-placeholder .pdf-icon { font-size:48px; opacity:0.3; }
     .pdf-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; height:50vh; gap:16px; }
     .pdf-loading .spinner { width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin 0.8s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
@@ -95,10 +93,9 @@
                   <button class="preview-tab" onclick="switchTab('info',this)">\u8bba\u6587\u4fe1\u606f</button>
                 </div>
                 <div id="tab-preview">
-                  <div class="pdf-placeholder" id="pdf-placeholder">
-                    <div class="pdf-icon">\u{1F4D1}</div>
-                    <p style="font-size:14px;">\u70B9\u51FB\u52A0\u8F7D PDF \u9884\u89C8</p>
-                    <button class="btn btn-primary btn-sm" onclick="loadPdf()">\u52A0\u8F7D PDF</button>
+                  <div class="pdf-loading" id="pdf-placeholder">
+                    <div class="spinner"></div>
+                    <p style="font-size:13px;color:var(--text-light);">PDF 加载中...</p>
                   </div>
                 </div>
                 <div id="tab-info" style="display:none;padding:24px;">
@@ -138,7 +135,7 @@
     function loadPdf() {
       const preview = document.getElementById('tab-preview');
       const placeholder = document.getElementById('pdf-placeholder');
-      // show loading
+      if (!placeholder) return;
       placeholder.innerHTML = '<div class="pdf-loading"><div class="spinner"></div><p style="font-size:13px;color:var(--text-light);">PDF \u52A0\u8F7D\u4E2D...</p></div>';
       const iframe = document.createElement('iframe');
       iframe.src = paper.pdf;
@@ -146,6 +143,8 @@
       iframe.onload = () => { preview.innerHTML = ''; preview.appendChild(iframe); };
       preview.appendChild(iframe);
     }
+    // Auto-load PDF after page content renders (non-blocking)
+    setTimeout(loadPdf, 500);
 
     function renderComments(comments) {
       const list = document.getElementById('comment-list');
