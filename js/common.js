@@ -179,8 +179,15 @@ function initPage(pageName) {
   initFeedback();
 }
 
-// === Feedback system (shared via GitHub Issues) ===
+// === Feedback system ===
+// Stores locally in localStorage; optionally syncs to GitHub Issues for cross-user sharing
 const FEEDBACK_REPO = 'mwyang2026-ship-it/liuxiaoxin-academic-website';
+const FB_STORAGE_KEY = 'site_feedback_list';
+
+function getLocalFeedback() {
+  try { return JSON.parse(localStorage.getItem(FB_STORAGE_KEY)) || []; } catch { return []; }
+}
+function saveLocalFeedback(list) { localStorage.setItem(FB_STORAGE_KEY, JSON.stringify(list)); }
 
 function initFeedback() {
   // Floating action button
@@ -211,27 +218,47 @@ function openFeedbackModal(quote) {
       <button class="edit-icon" onclick="this.closest('.fab-modal').remove()">&#10005;</button>
     </div>
     ${quote ? `<div class="quote-block">${escHtml(quote)}</div>` : ''}
+    <input type="text" id="fb-name" placeholder="您的称呼（可选）" maxlength="20" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;margin-bottom:8px;outline:none;">
     <textarea id="fb-text" placeholder="请描述您的修改建议或意见...">${quote ? '> ' + quote + '\n\n' : ''}</textarea>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
       <button class="btn btn-outline btn-sm" onclick="this.closest('.fab-modal').remove()">取消</button>
-      <button class="btn btn-primary btn-sm" onclick="submitFeedback()">提交</button>
+      <button class="btn btn-primary btn-sm" onclick="submitFeedback(false)">提交</button>
+      <button class="btn btn-outline btn-sm" onclick="submitFeedback(true)" title="同步到GitHub后其他访客也可看到">公开提交</button>
     </div>
-    <p style="font-size:11px;color:var(--text-light);margin-top:8px;">提交后将跳转至 GitHub，需登录后确认发布</p>
+    <p style="font-size:11px;color:var(--text-light);margin-top:8px;">「提交」保存到本浏览器；「公开提交」同步至 GitHub，其他访客可见</p>
   </div>`;
   document.body.appendChild(modal);
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 }
 
-function submitFeedback() {
+function submitFeedback(toGithub) {
+  const name = document.getElementById('fb-name').value.trim() || '匿名';
   const text = document.getElementById('fb-text').value.trim();
   if (!text) { showToast('请填写意见内容'); return; }
   const page = location.pathname.split('/').pop() || 'index.html';
-  const title = '[反馈] ' + page + ' - ' + text.slice(0, 50);
-  const body = '**页面**: ' + location.href + '\n\n' + text;
-  const url = `https://github.com/${FEEDBACK_REPO}/issues/new?labels=feedback&title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
-  window.open(url, '_blank');
+
+  // Save locally
+  const list = getLocalFeedback();
+  list.unshift({
+    id: 'fb_' + Date.now(),
+    name: name,
+    text: text,
+    page: page,
+    url: location.href,
+    timestamp: Date.now()
+  });
+  saveLocalFeedback(list);
   document.querySelector('.fab-modal').remove();
-  showToast('已跳转至 GitHub 提交');
+
+  if (toGithub) {
+    const title = '[反馈] ' + page + ' - ' + text.slice(0, 50);
+    const body = '**页面**: ' + location.href + '\n**提交者**: ' + name + '\n\n' + text;
+    const url = `https://github.com/${FEEDBACK_REPO}/issues/new?labels=feedback&title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+    window.open(url, '_blank');
+    showToast('已保存，请在GitHub确认发布');
+  } else {
+    showToast('意见已提交，感谢！');
+  }
 }
 
 function showContextMenu(x, y, quote) {
@@ -246,7 +273,6 @@ function showContextMenu(x, y, quote) {
     openFeedbackModal(quote);
   });
   document.body.appendChild(menu);
-  // Adjust position if overflows
   const rect = menu.getBoundingClientRect();
   if (rect.right > window.innerWidth) menu.style.left = (x - rect.width) + 'px';
   if (rect.bottom > window.innerHeight) menu.style.top = (y - rect.height) + 'px';

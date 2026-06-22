@@ -291,20 +291,29 @@
 
     renderPrompts();
 
-    // === 改进方向：从 GitHub Issues 加载反馈 ===
+    // === 改进方向：本地反馈 + GitHub Issues ===
     async function loadFeedback() {
       const container = document.getElementById('feedback-list');
+      // Local feedback
+      const localList = getLocalFeedback();
+      // GitHub Issues
+      let githubList = [];
       try {
         const res = await fetch('https://api.github.com/repos/mwyang2026-ship-it/liuxiaoxin-academic-website/issues?labels=feedback&state=open&per_page=30&sort=created&direction=desc');
-        if (!res.ok) throw new Error('API error');
-        const issues = await res.json();
-        if (issues.length === 0) {
-          container.innerHTML = '<div class="feedback-empty">暂无修改意见，欢迎通过右下角悬浮球提交</div>';
-          return;
-        }
-        container.innerHTML = issues.map(issue => {
+        if (res.ok) githubList = await res.json();
+      } catch {}
+
+      if (localList.length === 0 && githubList.length === 0) {
+        container.innerHTML = '<div class="feedback-empty">暂无修改意见，欢迎通过右下角悬浮球提交</div>';
+        return;
+      }
+
+      let html = '';
+      // GitHub feedback (shared)
+      if (githubList.length > 0) {
+        html += '<p style="font-size:13px;color:var(--primary);margin-bottom:12px;font-weight:600;">公开反馈（来自其他访客）</p>';
+        html += githubList.map(issue => {
           const date = new Date(issue.created_at).toLocaleDateString('zh-CN');
-          // Parse quoted text from body
           const bodyHtml = escHtml(issue.body || '').replace(/\n/g, '<br>');
           const quoteMatch = (issue.body || '').match(/^> (.+)$/m);
           const quoteHtml = quoteMatch ? `<div class="fb-quote">${escHtml(quoteMatch[1])}</div>` : '';
@@ -315,9 +324,23 @@
             <div class="fb-meta">${issue.user.login} · ${date} · <a href="${issue.html_url}" target="_blank" style="color:var(--primary);">查看详情</a></div>
           </div>`;
         }).join('');
-      } catch (e) {
-        container.innerHTML = '<div class="feedback-empty">无法加载反馈，请稍后再试</div>';
       }
+      // Local feedback
+      if (localList.length > 0) {
+        html += '<p style="font-size:13px;color:var(--primary);margin:16px 0 12px;font-weight:600;">我的反馈</p>';
+        html += localList.map(fb => {
+          const date = new Date(fb.timestamp).toLocaleDateString('zh-CN');
+          const quoteMatch = fb.text.match(/^> (.+)$/m);
+          const quoteHtml = quoteMatch ? `<div class="fb-quote">${escHtml(quoteMatch[1])}</div>` : '';
+          const bodyText = fb.text.replace(/^> .+\n\n?/, '').replace(/\n/g, '<br>');
+          return `<div class="feedback-item">
+            ${quoteHtml}
+            <div class="fb-body">${escHtml(bodyText)}</div>
+            <div class="fb-meta">${escHtml(fb.name)} · ${date} · ${escHtml(fb.page)}</div>
+          </div>`;
+        }).join('');
+      }
+      container.innerHTML = html;
     }
 
     // Load feedback when tab is first clicked
