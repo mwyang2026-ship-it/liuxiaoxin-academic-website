@@ -124,6 +124,7 @@ function renderFooter() {
       <span class="friend-links-label">友情链接：</span>${linksHtml}
     </div>
     <p style="margin-top:8px;">&copy; 刘晓欣 · 南开大学经济学院 · 虚拟经济与管理研究中心</p>
+    <p style="margin-top:4px;">如有问题请联系：<a href="mailto:mw.yang@foxmail.com" style="color:var(--primary);text-decoration:none;">mw.yang@foxmail.com</a></p>
   </footer>`;
 }
 
@@ -175,4 +176,83 @@ function initPage(pageName) {
   const footer = document.getElementById('site-footer');
   if (header) header.innerHTML = renderHeader(pageName);
   if (footer) footer.innerHTML = renderFooter();
+  initFeedback();
+}
+
+// === Feedback system (shared via GitHub Issues) ===
+const FEEDBACK_REPO = 'mwyang2026-ship-it/liuxiaoxin-academic-website';
+
+function initFeedback() {
+  // Floating action button
+  const fab = document.createElement('div');
+  fab.className = 'fab';
+  fab.innerHTML = '<button class="fab-btn" title="提交修改意见">+</button>';
+  document.body.appendChild(fab);
+  fab.querySelector('.fab-btn').addEventListener('click', () => openFeedbackModal());
+
+  // Right-click context menu for selected text
+  document.addEventListener('contextmenu', (e) => {
+    const sel = window.getSelection().toString().trim();
+    if (!sel || sel.length < 2) return;
+    e.preventDefault();
+    showContextMenu(e.clientX, e.clientY, sel);
+  });
+  document.addEventListener('click', () => removeContextMenu());
+}
+
+function openFeedbackModal(quote) {
+  let modal = document.querySelector('.fab-modal');
+  if (modal) modal.remove();
+  modal = document.createElement('div');
+  modal.className = 'fab-modal active';
+  modal.innerHTML = `<div class="modal">
+    <div class="flex-between mb-16">
+      <h3 style="margin:0">提交修改意见</h3>
+      <button class="edit-icon" onclick="this.closest('.fab-modal').remove()">&#10005;</button>
+    </div>
+    ${quote ? `<div class="quote-block">${escHtml(quote)}</div>` : ''}
+    <textarea id="fb-text" placeholder="请描述您的修改建议或意见...">${quote ? '> ' + quote + '\n\n' : ''}</textarea>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+      <button class="btn btn-outline btn-sm" onclick="this.closest('.fab-modal').remove()">取消</button>
+      <button class="btn btn-primary btn-sm" onclick="submitFeedback()">提交</button>
+    </div>
+    <p style="font-size:11px;color:var(--text-light);margin-top:8px;">提交后将跳转至 GitHub，需登录后确认发布</p>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+}
+
+function submitFeedback() {
+  const text = document.getElementById('fb-text').value.trim();
+  if (!text) { showToast('请填写意见内容'); return; }
+  const page = location.pathname.split('/').pop() || 'index.html';
+  const title = '[反馈] ' + page + ' - ' + text.slice(0, 50);
+  const body = '**页面**: ' + location.href + '\n\n' + text;
+  const url = `https://github.com/${FEEDBACK_REPO}/issues/new?labels=feedback&title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+  window.open(url, '_blank');
+  document.querySelector('.fab-modal').remove();
+  showToast('已跳转至 GitHub 提交');
+}
+
+function showContextMenu(x, y, quote) {
+  removeContextMenu();
+  const menu = document.createElement('div');
+  menu.className = 'ctx-menu';
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.innerHTML = '<button>对此内容提意见</button>';
+  menu.querySelector('button').addEventListener('click', () => {
+    removeContextMenu();
+    openFeedbackModal(quote);
+  });
+  document.body.appendChild(menu);
+  // Adjust position if overflows
+  const rect = menu.getBoundingClientRect();
+  if (rect.right > window.innerWidth) menu.style.left = (x - rect.width) + 'px';
+  if (rect.bottom > window.innerHeight) menu.style.top = (y - rect.height) + 'px';
+}
+
+function removeContextMenu() {
+  const menu = document.querySelector('.ctx-menu');
+  if (menu) menu.remove();
 }

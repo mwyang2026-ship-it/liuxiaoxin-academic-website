@@ -445,6 +445,30 @@ body {
 .version-item .ts { font-size: 12px; color: var(--text-light); }
 .version-item .action { font-size: 13px; color: var(--text); }
 
+/* Feedback floating ball */
+.fab { position:fixed; bottom:32px; right:32px; z-index:999; }
+.fab-btn { width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:#fff; border:none; font-size:20px; cursor:pointer; box-shadow:0 4px 16px rgba(75,0,130,0.3); transition:transform 0.2s,box-shadow 0.2s; display:flex; align-items:center; justify-content:center; }
+.fab-btn:hover { transform:scale(1.1); box-shadow:0 6px 24px rgba(75,0,130,0.4); }
+.fab-modal { display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.4); z-index:1000; justify-content:center; align-items:center; }
+.fab-modal.active { display:flex; }
+.fab-modal .modal { max-width:440px; width:90%; }
+.fab-modal textarea { width:100%; min-height:100px; padding:10px 14px; border:1px solid var(--border); border-radius:6px; font-size:14px; line-height:1.6; outline:none; resize:vertical; font-family:inherit; }
+.fab-modal textarea:focus { border-color:var(--primary); }
+.fab-modal .quote-block { background:rgba(75,0,130,0.04); border-left:3px solid var(--primary); padding:8px 12px; font-size:13px; color:var(--text-light); margin-bottom:12px; border-radius:0 6px 6px 0; max-height:80px; overflow-y:auto; }
+
+/* Context menu for selected text */
+.ctx-menu { position:fixed; background:#fff; border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.12); z-index:1100; padding:4px 0; min-width:160px; }
+.ctx-menu button { display:block; width:100%; padding:8px 16px; border:none; background:none; font-size:13px; color:var(--text); cursor:pointer; text-align:left; }
+.ctx-menu button:hover { background:rgba(75,0,130,0.06); color:var(--primary); }
+
+/* Feedback list */
+.feedback-item { padding:14px 16px; border-left:3px solid var(--primary); background:rgba(75,0,130,0.02); border-radius:0 6px 6px 0; margin-bottom:12px; }
+.feedback-item .fb-title { font-size:14px; font-weight:600; color:var(--text); margin-bottom:4px; }
+.feedback-item .fb-body { font-size:13px; color:var(--text-light); line-height:1.6; }
+.feedback-item .fb-meta { font-size:11px; color:var(--text-light); margin-top:6px; }
+.feedback-item .fb-quote { background:rgba(75,0,130,0.04); border-left:2px solid var(--accent); padding:6px 10px; font-size:12px; color:var(--text-light); margin:6px 0; border-radius:0 4px 4px 0; }
+.feedback-empty { text-align:center; padding:40px; color:var(--text-light); }
+
 /* Responsive */
 @media (max-width: 768px) {
   .site-header h1 { font-size: 24px; }
