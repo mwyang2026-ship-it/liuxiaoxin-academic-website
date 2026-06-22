@@ -171,8 +171,21 @@ function escHtml(str) {
 }
 
 function initPage(pageName) {
+  // Show loading overlay
+  let overlay = document.querySelector('.page-loading');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'page-loading';
+    overlay.innerHTML = '<div class="loading-spinner"></div>';
+    document.body.prepend(overlay);
+  }
   const header = document.getElementById('site-header');
   const footer = document.getElementById('site-footer');
   if (header) header.innerHTML = renderHeader(pageName);
   if (footer) footer.innerHTML = renderFooter();
+  // Hide loading overlay after render
+  requestAnimationFrame(() => {
+    overlay.classList.add('fade-out');
+    setTimeout(() => overlay.remove(), 300);
+  });
 }
