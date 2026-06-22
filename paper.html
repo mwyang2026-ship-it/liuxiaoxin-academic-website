@@ -92,12 +92,7 @@
                   <button class="preview-tab active" onclick="switchTab('preview',this)">PDF \u9884\u89c8</button>
                   <button class="preview-tab" onclick="switchTab('info',this)">\u8bba\u6587\u4fe1\u606f</button>
                 </div>
-                <div id="tab-preview">
-                  <div class="pdf-loading" id="pdf-placeholder">
-                    <div class="spinner"></div>
-                    <p style="font-size:13px;color:var(--text-light);">PDF 加载中...</p>
-                  </div>
-                </div>
+                <div id="tab-preview"><iframe src="${paper.pdf}" title="PDF Preview"></iframe></div>
                 <div id="tab-info" style="display:none;padding:24px;">
                   <table style="width:100%;font-size:14px;line-height:2;">
                     <tr><td style="color:var(--text-light);width:80px;">\u6807\u9898</td><td>${paper.title}</td></tr>
@@ -131,20 +126,6 @@
       btn.parentElement.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
       btn.classList.add('active');
     }
-
-    function loadPdf() {
-      const preview = document.getElementById('tab-preview');
-      const placeholder = document.getElementById('pdf-placeholder');
-      if (!placeholder) return;
-      placeholder.innerHTML = '<div class="pdf-loading"><div class="spinner"></div><p style="font-size:13px;color:var(--text-light);">PDF \u52A0\u8F7D\u4E2D...</p></div>';
-      const iframe = document.createElement('iframe');
-      iframe.src = paper.pdf;
-      iframe.title = 'PDF Preview';
-      iframe.onload = () => { preview.innerHTML = ''; preview.appendChild(iframe); };
-      preview.appendChild(iframe);
-    }
-    // Auto-load PDF after page content renders (non-blocking)
-    setTimeout(loadPdf, 500);
 
     function renderComments(comments) {
       const list = document.getElementById('comment-list');
